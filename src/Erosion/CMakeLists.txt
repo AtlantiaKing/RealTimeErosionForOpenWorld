@@ -1,0 +1,41 @@
+# Application CMake
+
+# Check if Win32 & Console
+if(DEFINED IsConsole)
+if (IsConsole)
+	else()
+	if(WIN32)
+		set(WIN32_EXECUTABLE WIN32)
+	endif()
+endif()
+endif()
+
+# Create executable
+add_executable(Erosion ${WIN32_EXECUTABLE}
+	"main.cpp"
+	"Scenes/Sample.cpp" "Components/FreeCamMovement.h" "Components/FreeCamMovement.cpp" "Components/TerrainGenerator.h" "Components/TerrainGenerator.cpp")
+
+# Link Engine libs
+target_include_directories(Erosion PRIVATE ${LEAP_INCLUDE} ${LEAP_AUDIO_INCLUDE} ${LEAP_GRAPHICS_INCLUDE} ${LEAP_INPUT_INCLUDE} ${LEAP_NETWORK_INCLUDE} ${LEAP_PHYSICS_INCLUDE} ${LEAP_UTILS_INCLUDE})
+target_link_libraries(Erosion PRIVATE ${LEAP_LIB} ${LEAP_AUDIO_LIB} ${LEAP_GRAPHICS_LIB} ${LEAP_INPUT_LIB} ${LEAP_NETWORK_LIB} ${LEAP_PHYSICS_LIB} ${LEAP_UTILS_LIB})
+
+# 3rd party linking
+target_include_directories(Erosion PRIVATE ${GLMIncludeDir} ${FMOD_INCLUDE_DIR} ${GLFW_INCLUDE_DIR} ${PHYSX_INCLUDE_DIR} ${DIRECTX_TEX_INCLUDE_DIR} ${FX11_INCLUDE_DIR} ${VLD_INCLUDE_DIR})
+target_link_libraries(Erosion PRIVATE ${FMOD_LIBRARY_DIR} ${GLFW_LIBRARY_DIR} ${FX11_LIBRARY_DIR} ${VLD_LIBRARY_DIR})
+target_link_libraries(Erosion PRIVATE ${PHYSX_LIBRARY_DIR} ${PHYSX_COMMON_LIBRARY_DIR} ${PHYSX_COOKING_LIBRARY_DIR} ${PHYSX_FOUNDATION_LIBRARY_DIR} ${PHYSX_LOWLEVELAABB_LIBRARY_DIR} ${PHYSX_LOWLEVELDYNAMICS_LIBRARY_DIR} ${PHYSX_LOWLEVEL_LIBRARY_DIR} ${PHYSX_CHARACTERKINEMATIC_LIBRARY_DIR} ${PHYSX_EXTENSIONS_LIBRARY_DIR} ${PHYSX_PVDSDK_LIBRARY_DIR} ${PHYSX_TASK_LIBRARY_DIR} ${PHYSX_VEHICLE_LIBRARY_DIR} ${PHYSX_SCENEQUERY_LIBRARY_DIR} ${PHYSX_SIMULATIONCONTROLLER_LIBRARY_DIR})
+
+# Copies used for .exe
+add_custom_command(TARGET Erosion PRE_LINK
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FMOD_DLL_DIR} $<TARGET_FILE_DIR:Erosion>
+    COMMENT "Copying FMOD DLL..."
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PHYSX_DLL_DIR} $<TARGET_FILE_DIR:Erosion>
+    COMMENT "Copying PHYSX DLL..."
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PHYSX_COMMON_DLL_DIR} $<TARGET_FILE_DIR:Erosion>
+    COMMENT "Copying PHYSX COMMON DLL..."
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PHYSX_COOKING_DLL_DIR} $<TARGET_FILE_DIR:Erosion>
+    COMMENT "Copying PHYSX COOKING DLL..."
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PHYSX_FOUNDATION_DLL_DIR} $<TARGET_FILE_DIR:Erosion>
+    COMMENT "Copying PHYSX FOUNDATION DLL..."
+    COMMAND ${CMAKE_COMMAND} -E copy_directory  ${DATA_FILES} ${DESTINATION_COPY}
+    COMMENT "Copying DATA..."
+)
