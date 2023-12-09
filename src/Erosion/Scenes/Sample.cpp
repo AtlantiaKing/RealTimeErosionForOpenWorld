@@ -9,7 +9,7 @@
 #include "../Components/FreeCamMovement.h"
 
 #include <Components/RenderComponents/TerrainComponent.h>
-#include "../Components/TerrainGenerator.h"
+#include "../Components/TerrainGeneratorComponent.h"
 
 void Erosion::SampleScene::Load(leap::Scene& scene)
 {
@@ -25,5 +25,5 @@ void Erosion::SampleScene::Load(leap::Scene& scene)
 
 	const auto pTerrain{ scene.CreateGameObject("Terrain") };
 	pTerrain->AddComponent<leap::TerrainComponent>()->SetSize(256);
-	pTerrain->AddComponent<Erosion::TerrainGenerator>();
+	pTerrain->AddComponent<Erosion::TerrainGeneratorComponent>();
 }

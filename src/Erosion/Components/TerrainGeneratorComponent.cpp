@@ -1,4 +1,4 @@
-#include "TerrainGenerator.h"
+#include "TerrainGeneratorComponent.h"
 
 #include <Components/RenderComponents/TerrainComponent.h>
 #include <SceneGraph/GameObject.h>
@@ -9,7 +9,7 @@
 #include <WorldShape/CirclePeak.h>
 #include <WorldShape/SquarePeak.h>
 
-void Erosion::TerrainGenerator::Awake()
+void Erosion::TerrainGeneratorComponent::Awake()
 {
 	leap::TerrainComponent* pTerrain{ GetGameObject()->GetComponent<leap::TerrainComponent>() };
 
