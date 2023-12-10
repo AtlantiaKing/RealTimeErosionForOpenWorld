@@ -35,7 +35,7 @@ void Erosion::TerrainGeneratorComponent::Awake()
 	{
 		for (unsigned int z{}; z < terrainSize; ++z)
 		{
-			float noiseValue{ gen.GetHeight(static_cast<float>(x), static_cast<float>(z)) };
+			float noiseValue{ gen.GetHeight(static_cast<float>(x) / 5.0f, static_cast<float>(z) / 5.0f) };
 
 			if (noiseValue < 0.25f) noiseValue = 0.25f;
 

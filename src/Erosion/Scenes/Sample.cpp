@@ -24,6 +24,6 @@ void Erosion::SampleScene::Load(leap::Scene& scene)
 	pDirLight->AddComponent<leap::DirectionalLightComponent>()->GetTransform()->SetWorldRotation(60, 45, 0, true);
 
 	const auto pTerrain{ scene.CreateGameObject("Terrain") };
-	pTerrain->AddComponent<leap::TerrainComponent>()->SetSize(256);
+	pTerrain->AddComponent<leap::TerrainComponent>()->SetSize(256, 4);
 	pTerrain->AddComponent<Erosion::TerrainGeneratorComponent>();
 }
