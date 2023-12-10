@@ -14,30 +14,18 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 		float amountWater{};
 		float amountSediment{};
 		int pathLength{};
-		bool active{ true };
 	};
 
 	// Simulation data
-	constexpr int nrDroplets{ 10000 };
-	constexpr int cycles{ 100 };
+	constexpr int cycles{ 1000000 };
 
 	// Terrain data
 	const int terrainSize{ static_cast<int>(sqrtf(static_cast<float>(heights.size()))) };
 
-	// Initialize droplets
-	std::vector<Droplet> droplets{};
-	for (int dropletIdx{}; dropletIdx < nrDroplets; ++dropletIdx)
-	{
-		float angle{ Random01() * glm::pi<float>() };
-		droplets.emplace_back(
-			glm::vec2{ Random01() * (terrainSize - 1), Random01() * (terrainSize - 1) },
-			glm::vec2{ cosf(angle), sinf(angle) },
-			1.0f, 
-			1.0f,
-			0.0f,
-			0,
-			true);
-	}
+	// Erosion radius data
+	constexpr int erosionRadius{ 9 };
+	std::vector<float> radiusWeights{};
+	radiusWeights.resize(erosionRadius* erosionRadius);
 
 	// Droplet simulation data
 	constexpr int maxPathLength{ 100 };
@@ -47,17 +35,25 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 	constexpr float gravity{ -9.81f };
 	constexpr float evaporation{ 0.0125f };
 	constexpr float deposition{ 1.0f };
-	constexpr float erosion{ 0.5f };
+	constexpr float erosion{ 0.9f };
 
 	// X cycles
 	for (int cycleIdx{}; cycleIdx < cycles; ++cycleIdx)
 	{
-		// Simulate droplets
-		for (auto& droplet : droplets)
+		// Create a droplet
+		const float angle{ Random01() * glm::pi<float>() };
+		Droplet droplet
 		{
-			// Don't update inactive droplets
-			if (!droplet.active) continue;
-			
+			glm::vec2{ Random01() * (terrainSize - 1), Random01() * (terrainSize - 1) },
+			glm::vec2{ cosf(angle), sinf(angle) },
+			1.0f,
+			1.0f,
+			0.0f,
+			0
+		};
+
+		for (int lifeTime{}; lifeTime < maxPathLength; ++lifeTime)
+		{
 			// Calculate grid position and position inside cell
 			const int gridPosX{ static_cast<int>(droplet.position.x) };
 			const int gridPosY{ static_cast<int>(droplet.position.y) };
@@ -81,7 +77,7 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 
 			// Calculate the new direction and position of the droplet
 			droplet.direction = droplet.direction * inertia - gradient * (1.0f - inertia);
-			if (glm::dot(droplet.direction, droplet.direction) < FLT_EPSILON) droplet.active = false;
+			if (glm::dot(droplet.direction, droplet.direction) < FLT_EPSILON) break;
 			else droplet.direction = glm::normalize(droplet.direction);
 			droplet.position = droplet.position + droplet.direction;
 
@@ -94,8 +90,7 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 			// If the droplet has fallen outside the map, disable the droplet
 			if (newGridPosX < 0 || newGridPosY < 0 || newGridPosX >= terrainSize || newGridPosY >= terrainSize)
 			{
-				droplet.active = false;
-				continue;
+				break;
 			}
 
 			// Calculate the height of all the neighbouring cells around the new droplet position
@@ -134,11 +129,64 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 				// Calculate the taken amount of sediment
 				const float takenSediment{ std::min((curCapacity - droplet.amountSediment) * erosion, -heightDiff) };
 
-				// Remove the sediment from the four grid positions around the droplets position
-				heights[gridPosX + gridPosY * terrainSize] -= takenSediment * (1.0f - cellPosX) * (1.0f - cellPosY);
-				if(gridPosX + 1 < terrainSize) heights[gridPosX + 1 + gridPosY * terrainSize] -= takenSediment * cellPosX * (1.0f - cellPosY);
-				if (gridPosY + 1 < terrainSize) heights[gridPosX + (gridPosY + 1) * terrainSize] -= takenSediment * (1.0f - cellPosX) * cellPosY;
-				if (gridPosX + 1 < terrainSize && gridPosY + 1 < terrainSize) heights[gridPosX + 1 + (gridPosY + 1) * terrainSize] -= takenSediment * cellPosX * cellPosY;
+				// Calculate the current position of the droplet
+				const float dropletPosX{ gridPosX + cellPosX };
+				const float dropletPosY{ gridPosY + cellPosY };
+
+				float totalWeight{};
+				float smallestDistance{ FLT_MAX };
+				float highestDistance{};
+
+				// Calculate the weights of all the grid points near the droplet and their combined total weight
+				const int halfErosionRadius{ erosionRadius / 2 };
+				for (int radX{}; radX < erosionRadius; ++radX)
+				{
+					for (int radY{}; radY < erosionRadius; ++radY)
+					{
+						const int xPos = gridPosX + radX - halfErosionRadius;
+						const int yPos = gridPosY + radY - halfErosionRadius;
+
+						if (xPos < 0 || yPos < 0 || xPos >= terrainSize || yPos >= terrainSize) continue;
+
+						const float dX{ dropletPosX - xPos };
+						const float dY{ dropletPosY - yPos };
+
+						const float distance{ sqrtf(static_cast<float>(dX * dX + dY * dY)) };
+						const int radiusIdx{ radX + radY * erosionRadius };
+						radiusWeights[radiusIdx] = distance;
+
+						if (smallestDistance > distance) smallestDistance = distance;
+						if (highestDistance < distance) highestDistance = distance;
+					}
+				}
+
+				// Reverse the weights
+				for (float& weight : radiusWeights)
+				{
+					weight = 1.0f - (weight - smallestDistance) / (highestDistance - smallestDistance);
+					totalWeight += weight;
+				}
+
+				// Normalize the weights
+				for (float& weight : radiusWeights)
+				{
+					weight /= totalWeight;
+				}
+
+				// Remove the sediment from all the grid positions in the radius of the droplet
+				for (int radX{}; radX < erosionRadius; ++radX)
+				{
+					for (int radY{}; radY < erosionRadius; ++radY)
+					{
+						const int xPos = radX - halfErosionRadius;
+						const int yPos = radY - halfErosionRadius;
+
+						if (gridPosX + xPos < 0 || gridPosY + yPos < 0 || gridPosX + xPos >= terrainSize || gridPosY + yPos >= terrainSize) continue;
+
+						const int radiusIdx{ radX + radY * erosionRadius };
+						heights[gridPosX + xPos + (gridPosY + yPos) * terrainSize] -= takenSediment * radiusWeights[radiusIdx];
+					}
+				}
 
 				// Update the droplets sediment amount
 				droplet.amountSediment += takenSediment;
@@ -149,13 +197,16 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 			droplet.speed = sqrtSpeed < 0.0f ? 0.0f : sqrtf(sqrtSpeed);
 
 			// If the droplet has lost all its speed, disable the droplet
-			if (droplet.speed <= 0) droplet.active = false;
+			if (droplet.speed <= 0) break;
 
 			// Update the water amount of the droplet
 			droplet.amountWater = droplet.amountWater * (1.0f - evaporation);
 
+			// If the droplet has no more water, disable the droplet
+			if (droplet.amountWater <= 0) break;
+
 			// Increase the life time of the droplet, if it exceeds the max, disable the droplet
-			if (++droplet.pathLength >= maxPathLength) droplet.active = false;
+			if (++droplet.pathLength >= maxPathLength) break;
 		}
 	}
 }
