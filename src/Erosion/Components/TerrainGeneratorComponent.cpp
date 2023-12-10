@@ -20,15 +20,18 @@ void Erosion::TerrainGeneratorComponent::Awake()
 	const unsigned int terrainSize{ static_cast<unsigned int>(sqrt(heights.size())) };
 
 	// Create generator
-	constexpr float mapZoom{ 3.5f };
 	that::Generator gen{};
 	gen.SetSize(static_cast<float>(terrainSize));
 
-	// Calculate a new seed
-	const unsigned int seed{ static_cast<unsigned int>(time(nullptr)) };
-
-	// Create a terrain generator
-	that::preset::Presets::CreateDefaultTerrain(gen, seed, mapZoom);
+	// Create noise map
+	that::NoiseMap noise{};
+	noise.GetGraph().AddNode(0.0f, 0.0f);
+	noise.GetGraph().AddNode(1.0f, 1.0f);
+	noise.GetPerlin().AddOctave(1.0f, 40.0f);
+	noise.GetPerlin().AddOctave(0.5f, 30.0f);
+	noise.GetPerlin().AddOctave(0.2f, 20.0f);
+	noise.GetPerlin().AddOctave(0.1f, 10.0f);
+	gen.GetHeightMap().AddNoiseMap(noise);
 
 	// Generate a terrain by perlin noise
 	for (unsigned int x{}; x < terrainSize; ++x)
