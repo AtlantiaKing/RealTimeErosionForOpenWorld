@@ -9,6 +9,8 @@
 #include <WorldShape/CirclePeak.h>
 #include <WorldShape/SquarePeak.h>
 
+#include "../ErosionAlgorithms/HansBeyer.h"
+
 void Erosion::TerrainGeneratorComponent::Awake()
 {
 	leap::TerrainComponent* pTerrain{ GetGameObject()->GetComponent<leap::TerrainComponent>() };
@@ -28,6 +30,7 @@ void Erosion::TerrainGeneratorComponent::Awake()
 	// Create a terrain generator
 	that::preset::Presets::CreateDefaultTerrain(gen, seed, mapZoom);
 
+	// Generate a terrain by perlin noise
 	for (unsigned int x{}; x < terrainSize; ++x)
 	{
 		for (unsigned int z{}; z < terrainSize; ++z)
@@ -40,5 +43,10 @@ void Erosion::TerrainGeneratorComponent::Awake()
 		}
 	}
 
+	// Apply a erosion algorithm
+	auto pErosion{ std::make_unique<HansBeyer>() };
+	pErosion->GetHeights(heights);
+
+	// Apply the new heightmap to the terrain component
 	pTerrain->SetHeights(heights);
 }
