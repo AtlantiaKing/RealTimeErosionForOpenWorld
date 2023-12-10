@@ -2,6 +2,8 @@
 
 #include "../../Component.h"
 
+#include <Observer.h>
+
 #include <vec2.hpp>
 #include <Vector2.h>
 #include <vec3.hpp>
@@ -10,7 +12,7 @@ namespace leap
 {
 	class CanvasComponent;
 
-	class RectTransform final : public Component
+	class RectTransform final : public Component, TObserver<glm::vec2>
 	{
 	public:
 		RectTransform() = default;
@@ -33,6 +35,8 @@ namespace leap
 
 		void SetDepth(float depth);
 
+		virtual void Notify(const glm::vec2& multiplier);
+
 	protected:
 		virtual void Awake() override;
 		virtual void OnDestroy() override;
@@ -42,7 +46,6 @@ namespace leap
 		void UpdateSize();
 		void UpdatePosition();
 		void GetCanvas();
-		void OnResolutionChanged(const glm::vec2& multiplier);
 
 		bool m_IsSizeDirty{ true };
 		bool m_IsPositionDirty{ true };

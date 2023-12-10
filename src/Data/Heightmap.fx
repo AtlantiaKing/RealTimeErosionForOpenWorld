@@ -100,7 +100,16 @@ bool IsInsideTexture(int position)
     gHeightMap.GetDimensions(width, height);
     
     return position >= 0 && position < width;
+}
 
+float4 RGBAtoUINT(float4 rgba)
+{
+    uint r = rgba.b * 255;
+    uint g = rgba.g * 255;
+    uint b = rgba.r * 255;
+    uint a = rgba.a * 255;
+    //return b + g * 256 + r * 256 * 256 + a * 256 * 256 * 256;
+    return (r + (g << 8) + (b << 16) + (a << 24)) / 4294967295.0f;
 }
 
 float GetNeighbouringHeight(float curHeight, float2 curPos, int neighbourValueX, int neighbourValueY)
@@ -113,7 +122,8 @@ float GetNeighbouringHeight(float curHeight, float2 curPos, int neighbourValueX,
     if (!IsInsideTexture(y))
         return curHeight;
     
-    return gHeightMap[float2(x, y)] * gMaxHeight;
+    float4 texColor = gHeightMap[float2(x,y)];
+    return RGBAtoUINT(texColor) * gMaxHeight;
 }
 
 VS_OUTPUT VS(VS_INPUT input) 
@@ -121,7 +131,8 @@ VS_OUTPUT VS(VS_INPUT input)
 	VS_OUTPUT output;
     float2 heightMapPos = input.uv;
 	// Step 1:	convert position into float4 and multiply with matWorldViewProj
-    float height = gHeightMap[heightMapPos] * gMaxHeight;
+    float4 texColor = gHeightMap[heightMapPos];
+    float height = RGBAtoUINT(texColor) * gMaxHeight;
     	
     float L = GetNeighbouringHeight(height, heightMapPos, -1.0f, 0.0f);
     float R = GetNeighbouringHeight(height, heightMapPos, 1.0f, 0.0f);

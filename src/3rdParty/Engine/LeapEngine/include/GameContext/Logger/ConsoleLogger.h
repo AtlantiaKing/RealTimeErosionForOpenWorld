@@ -1,9 +1,10 @@
 #pragma once
+#include "Observer.h"
 #include "Debug.h"
 #include "ILogger.h"
 namespace leap
 {
-	class ConsoleLogger final : public ILogger
+	class ConsoleLogger final : TObserver<Debug::LogInfo>, public ILogger
 	{
 	public:
 		ConsoleLogger();
@@ -16,7 +17,7 @@ namespace leap
 		virtual void SetEnabled(bool enable) override;
 
 	private:
-		void OnDebug(const Debug::LogInfo& data) const;
+		virtual void Notify(const Debug::LogInfo& data) override;
 		bool m_Enabled{};
 
 #pragma region Color codes

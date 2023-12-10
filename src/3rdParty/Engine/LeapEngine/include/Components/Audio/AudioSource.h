@@ -2,6 +2,8 @@
 
 #include "../Component.h"
 
+#include <Observer.h>
+
 #include <string>
 
 namespace leap
@@ -11,7 +13,7 @@ namespace leap
 		class IAudioClip;
 	}
 
-	class AudioSource final : public Component
+	class AudioSource final : public Component, public Observer
 	{
 	public:
 		AudioSource() = default;
@@ -42,9 +44,9 @@ namespace leap
 
 	private:
 		virtual void Awake() override;
+		virtual void Notify() override;
 		virtual void OnDestroy() override;
 
-		void OnPositionChanged() const;
 		void Update2DVolume() const;
 		void Update3DSound() const;
 		void UpdateLoopCount() const;

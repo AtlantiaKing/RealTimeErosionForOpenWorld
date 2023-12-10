@@ -2,9 +2,11 @@
 
 #include "../Component.h"
 
+#include <Observer.h>
+
 namespace leap
 {
-	class AudioListener final : public Component
+	class AudioListener final : public Component, public Observer
 	{
 	public:
 		AudioListener() = default;
@@ -18,6 +20,6 @@ namespace leap
 	private:
 		virtual void Awake() override;
 		virtual void OnDestroy() override;
-		void OnPositionChanged() const;
+		virtual void Notify() override;
 	};
 }

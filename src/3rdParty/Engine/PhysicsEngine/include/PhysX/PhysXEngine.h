@@ -8,6 +8,8 @@
 #include <memory>
 #include <unordered_map>
 
+#include <Observer.h>
+
 #include <vec3.hpp>
 #pragma warning(disable: 4201)
 #include "gtc/quaternion.hpp"
@@ -30,7 +32,7 @@ namespace leap::physics
 	class PhysXObject;
 	class PhysXSimulationCallbacks;
 
-	class PhysXEngine final : public IPhysics
+	class PhysXEngine final : public IPhysics, public TObserver<SimulationEvent>
 	{
 	public:
 		PhysXEngine();
@@ -63,9 +65,9 @@ namespace leap::physics
 
 		physx::PxPhysics* GetPhysics() const { return m_pPhysics; }
 
-	private:
-		void OnSimulationEvent(const SimulationEvent& e);
+		virtual void Notify(const SimulationEvent& e) override;
 
+	private:
 		IPhysicsMaterial* GetDefaultMaterial();
 
 		std::unique_ptr<physx::PxDefaultErrorCallback> m_pDefaultErrorCallback{};

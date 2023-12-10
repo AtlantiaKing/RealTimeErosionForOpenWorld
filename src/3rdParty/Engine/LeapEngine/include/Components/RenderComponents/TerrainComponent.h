@@ -27,8 +27,8 @@ namespace leap
 		TerrainComponent& operator=(const TerrainComponent& other) = delete;
 		TerrainComponent& operator=(TerrainComponent&& other) = delete;
 
-		void SetSize(unsigned int size);
-		void LoadHeightmap(const std::string& path, bool isShared = false);
+		void SetSize(unsigned int size, unsigned int quadsPerMeter = 1);
+		void LoadHeightmap(const std::string& path, bool isShared = false, unsigned int quadsPerMeter = 1);
 
 		std::vector<float> GetHeights() const;
 		void SetHeights(const std::vector<float>& heights);
@@ -46,9 +46,10 @@ namespace leap
 
 		void ApplySizeTexture();
 		void ApplySizeMesh(unsigned int prevSize);
-		void CreateMesh(unsigned int size);
+		void CreateMesh();
 
 		unsigned int m_Size{};
+		unsigned int m_QuadsPerMeter{};
 		graphics::IMeshRenderer* m_pRenderer{};
 		Texture m_Texture{};
 	};

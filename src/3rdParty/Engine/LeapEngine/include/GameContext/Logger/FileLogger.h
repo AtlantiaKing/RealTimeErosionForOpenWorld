@@ -1,4 +1,5 @@
 #pragma once
+#include "Observer.h"
 #include "Debug.h"
 #include <string>
 #include <fstream>
@@ -6,7 +7,7 @@
 
 namespace leap
 {
-	class FileLogger final : public ILogger
+	class FileLogger final : TObserver<Debug::LogInfo>, public ILogger
 	{
 	public:
 		FileLogger();
@@ -22,7 +23,7 @@ namespace leap
 		void StartFile();
 		void CloseFile();
 
-		void OnDebug(const Debug::LogInfo& data);
+		virtual void Notify(const Debug::LogInfo& data) override;
 		bool m_Enabled{};
 		std::string m_Path{ "log.txt" };
 		std::fstream m_File{};

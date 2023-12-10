@@ -1,12 +1,13 @@
 #pragma once
 #include <string>
+#include "Observer.h"
 #include "Debug.h"
 #include <vector>
 #include "ILogger.h"
 
 namespace leap
 {
-	class ImGuiLogger final : public ILogger
+	class ImGuiLogger final : TObserver<Debug::LogInfo>, public ILogger
 	{
 	public:
 		ImGuiLogger();
@@ -27,7 +28,7 @@ namespace leap
 		};
 
 		virtual void OnGUI() override;
-		void OnDebug(const Debug::LogInfo& data);
+		virtual void Notify(const Debug::LogInfo& data) override;
 
 		bool m_Enabled{};
 		std::vector<std::vector<LogInfo>> m_Logs{};
