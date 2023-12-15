@@ -144,6 +144,9 @@ VS_OUTPUT VS(VS_INPUT input)
 	//			this is achieved by clipping the 4x4 to a 3x3 matrix, 
 	//			thus removing the postion row of the matrix
     float3 normal = normalize(float3(-R + L, 4, -T + B));
+    normal.x *= 4.0f;
+    normal.z *= 4.0f;
+    normal = normalize(normal);
     output.normal = /*normalize(mul(normal, (float3x3) gWorld))*/normal;
     output.lPos = mul(float4(input.pos, 1.0f), mul(gWorld, gLightViewProj));
 
