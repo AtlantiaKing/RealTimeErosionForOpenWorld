@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Components/Component.h>
+#include <Generator.h>
 
 namespace Erosion
 {
@@ -17,5 +18,13 @@ namespace Erosion
 
 	private:
 		virtual void Awake() override;
+		virtual void OnGUI() override;
+
+		void Generate() const;
+
+		that::Generator m_Gen{};
+		unsigned int m_PosX{};
+		unsigned int m_PosY{};
+		bool m_EnableErosion{};
 	};
 }
