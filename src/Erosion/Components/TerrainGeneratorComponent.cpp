@@ -45,6 +45,9 @@ void Erosion::TerrainGeneratorComponent::Awake()
 
 	// Set the blendmode for the noisemaps
 	m_Gen.GetHeightMap().SetBlendMode(that::HeightMap::BlendMode::Multiply);
+
+	// Create erosion algorithm
+	m_pErosion = std::make_unique<HansBeyer>();
 }
 
 void Erosion::TerrainGeneratorComponent::OnGUI()
@@ -56,6 +59,8 @@ void Erosion::TerrainGeneratorComponent::OnGUI()
 	ImGui::Checkbox("Enable Erosion", &m_EnableErosion);
 	ImGui::DragScalar("Pos X", ImGuiDataType_::ImGuiDataType_U32, &m_PosX);
 	ImGui::DragScalar("Pos Y", ImGuiDataType_::ImGuiDataType_U32, &m_PosY);
+
+	m_pErosion->OnGUI();
 
 	ImGui::End();
 }
@@ -81,8 +86,7 @@ void Erosion::TerrainGeneratorComponent::Generate() const
 	// Apply a erosion algorithm
 	if (m_EnableErosion)
 	{
-		auto pErosion{ std::make_unique<HansBeyer>() };
-		pErosion->GetHeights(heights);
+		m_pErosion->GetHeights(heights);
 	}
 
 	// Apply the new heightmap to the terrain component

@@ -3,6 +3,10 @@
 #include <Components/Component.h>
 #include <Generator.h>
 
+#include "../ErosionAlgorithms/ITerrainGenerator.h"
+
+#include <memory>
+
 namespace Erosion
 {
 	class TerrainGeneratorComponent final : public leap::Component
@@ -23,6 +27,8 @@ namespace Erosion
 		void Generate() const;
 
 		that::Generator m_Gen{};
+		std::unique_ptr<ITerrainGenerator> m_pErosion{};
+
 		unsigned int m_PosX{};
 		unsigned int m_PosY{};
 		bool m_EnableErosion{};
