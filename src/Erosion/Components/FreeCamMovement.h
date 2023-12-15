@@ -21,5 +21,6 @@ namespace Erosion
 		virtual void OnDestroy() override;
 
 		std::vector <std::unique_ptr<leap::Command>> m_Commands{};
+		bool m_Sprinting{};
 	};
 }
