@@ -4,6 +4,8 @@
 #include <ext/scalar_constants.hpp>
 #include <geometric.hpp>
 
+#include <ImGui/imgui.h>
+
 void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 {
 	struct Droplet 
@@ -16,29 +18,15 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 		int pathLength{};
 	};
 
-	// Simulation data
-	constexpr int cycles{ 1000000 };
-
 	// Terrain data
 	const int terrainSize{ static_cast<int>(sqrtf(static_cast<float>(heights.size()))) };
 
 	// Erosion radius data
-	constexpr int erosionRadius{ 9 };
 	std::vector<float> radiusWeights{};
-	radiusWeights.resize(erosionRadius* erosionRadius);
-
-	// Droplet simulation data
-	constexpr int maxPathLength{ 100 };
-	constexpr float inertia{ 0.1f };
-	constexpr float minSlope{ 0.05f };
-	constexpr float capacity{ 16.0f };
-	constexpr float gravity{ -9.81f };
-	constexpr float evaporation{ 0.0125f };
-	constexpr float deposition{ 1.0f };
-	constexpr float erosion{ 0.9f };
+	radiusWeights.resize(m_ErosionRadius * m_ErosionRadius);
 
 	// X cycles
-	for (int cycleIdx{}; cycleIdx < cycles; ++cycleIdx)
+	for (int cycleIdx{}; cycleIdx < m_Cycles; ++cycleIdx)
 	{
 		// Create a droplet
 		const float angle{ Random01() * glm::pi<float>() };
@@ -52,7 +40,7 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 			0
 		};
 
-		for (int lifeTime{}; lifeTime < maxPathLength; ++lifeTime)
+		for (int lifeTime{}; lifeTime < m_MaxPathLength; ++lifeTime)
 		{
 			// Calculate grid position and position inside cell
 			const int gridPosX{ static_cast<int>(droplet.position.x) };
@@ -76,7 +64,7 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 			const float height{ (1.0f - cellPosY) * ((1.0f - cellPosX) * heightXY + cellPosX * heightXPlusY) + cellPosY * ((1.0f - cellPosX) * heightXYPlus + cellPosX * heightXPlusYPlus) };
 
 			// Calculate the new direction and position of the droplet
-			droplet.direction = droplet.direction * inertia - gradient * (1.0f - inertia);
+			droplet.direction = droplet.direction * m_Inertia - gradient * (1.0f - m_Inertia);
 			if (glm::dot(droplet.direction, droplet.direction) < FLT_EPSILON) break;
 			else droplet.direction = glm::normalize(droplet.direction);
 			droplet.position = droplet.position + droplet.direction;
@@ -106,14 +94,14 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 			const float heightDiff{ newHeight - height };
 
 			// Calculate the capacity of the droplet at its current state
-			const float curCapacity{ std::max(-heightDiff, minSlope) * droplet.speed * droplet.amountWater * capacity };
+			const float curCapacity{ std::max(-heightDiff, m_MinSlope) * droplet.speed * droplet.amountWater * m_Capacity };
 
 			// If the droplet has more sediment then its capacity, or the droplet is moving upwards, drop sediment on the ground
 			// Otherwise let the droplet take up sediment from the ground
 			if (droplet.amountSediment > curCapacity || heightDiff > 0.0f)
 			{
 				// Calculate the dropped amount of sediment
-				const float droppedSediment{ heightDiff > 0.0f ? std::min(heightDiff, droplet.amountSediment) : (droplet.amountSediment - curCapacity) * deposition };
+				const float droppedSediment{ heightDiff > 0.0f ? std::min(heightDiff, droplet.amountSediment) : (droplet.amountSediment - curCapacity) * m_Deposition };
 
 				// Add the sediment at the four grid positions around the droplets position
 				heights[gridPosX + gridPosY * terrainSize] += droppedSediment * (1.0f - cellPosX) * (1.0f - cellPosY);
@@ -127,7 +115,7 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 			else
 			{
 				// Calculate the taken amount of sediment
-				const float takenSediment{ std::min((curCapacity - droplet.amountSediment) * erosion, -heightDiff) };
+				const float takenSediment{ std::min((curCapacity - droplet.amountSediment) * m_Erosion, -heightDiff) };
 
 				// Calculate the current position of the droplet
 				const float dropletPosX{ gridPosX + cellPosX };
@@ -138,10 +126,10 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 				float highestDistance{};
 
 				// Calculate the weights of all the grid points near the droplet and their combined total weight
-				const int halfErosionRadius{ erosionRadius / 2 };
-				for (int radX{}; radX < erosionRadius; ++radX)
+				const int halfErosionRadius{ m_ErosionRadius / 2 };
+				for (int radX{}; radX < m_ErosionRadius; ++radX)
 				{
-					for (int radY{}; radY < erosionRadius; ++radY)
+					for (int radY{}; radY < m_ErosionRadius; ++radY)
 					{
 						const int xPos = gridPosX + radX - halfErosionRadius;
 						const int yPos = gridPosY + radY - halfErosionRadius;
@@ -152,7 +140,7 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 						const float dY{ dropletPosY - yPos };
 
 						const float distance{ sqrtf(static_cast<float>(dX * dX + dY * dY)) };
-						const int radiusIdx{ radX + radY * erosionRadius };
+						const int radiusIdx{ radX + radY * m_ErosionRadius };
 						radiusWeights[radiusIdx] = distance;
 
 						if (smallestDistance > distance) smallestDistance = distance;
@@ -174,16 +162,16 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 				}
 
 				// Remove the sediment from all the grid positions in the radius of the droplet
-				for (int radX{}; radX < erosionRadius; ++radX)
+				for (int radX{}; radX < m_ErosionRadius; ++radX)
 				{
-					for (int radY{}; radY < erosionRadius; ++radY)
+					for (int radY{}; radY < m_ErosionRadius; ++radY)
 					{
 						const int xPos = radX - halfErosionRadius;
 						const int yPos = radY - halfErosionRadius;
 
 						if (gridPosX + xPos < 0 || gridPosY + yPos < 0 || gridPosX + xPos >= terrainSize || gridPosY + yPos >= terrainSize) continue;
 
-						const int radiusIdx{ radX + radY * erosionRadius };
+						const int radiusIdx{ radX + radY * m_ErosionRadius };
 						heights[gridPosX + xPos + (gridPosY + yPos) * terrainSize] -= takenSediment * radiusWeights[radiusIdx];
 					}
 				}
@@ -193,20 +181,36 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 			}
 
 			// Update the speed of the droplet
-			const float sqrtSpeed{ droplet.speed * droplet.speed + heightDiff * gravity };
+			const float sqrtSpeed{ droplet.speed * droplet.speed + heightDiff * m_Gravity };
 			droplet.speed = sqrtSpeed < 0.0f ? 0.0f : sqrtf(sqrtSpeed);
 
 			// If the droplet has lost all its speed, disable the droplet
 			if (droplet.speed <= 0) break;
 
 			// Update the water amount of the droplet
-			droplet.amountWater = droplet.amountWater * (1.0f - evaporation);
+			droplet.amountWater = droplet.amountWater * (1.0f - m_Evaporation);
 
 			// If the droplet has no more water, disable the droplet
 			if (droplet.amountWater <= 0) break;
 
 			// Increase the life time of the droplet, if it exceeds the max, disable the droplet
-			if (++droplet.pathLength >= maxPathLength) break;
+			if (++droplet.pathLength >= m_MaxPathLength) break;
 		}
 	}
+}
+
+void Erosion::HansBeyer::OnGUI()
+{
+	ImGui::Spacing();
+	ImGui::Text("Hans Beyer Settings");
+	ImGui::SliderInt("Nr Cycles", &m_Cycles, 0, 1'000'000);
+	ImGui::SliderInt("Erosion Radius", &m_ErosionRadius, 1, 30);
+	ImGui::SliderInt("Max Path Length", &m_MaxPathLength, 1, 500);
+	ImGui::SliderFloat("Inertia", &m_Inertia, 0.0f, 1.0f);
+	ImGui::SliderFloat("Min Slope", &m_MinSlope, 0.0f, 1.0f);
+	ImGui::SliderFloat("Capacity", &m_Capacity, 0.0f, 128.0f);
+	ImGui::SliderFloat("Gravity", &m_Gravity, -50.0f, 50.0f);
+	ImGui::SliderFloat("Evaporation", &m_Evaporation, 0.0f, 1.0f);
+	ImGui::SliderFloat("Deposition", &m_Deposition, 0.0f, 1.0f);
+	ImGui::SliderFloat("Erosion", &m_Erosion, 0.0f, 1.0f);
 }
