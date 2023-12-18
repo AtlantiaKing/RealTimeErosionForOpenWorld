@@ -31,6 +31,6 @@ namespace Erosion
 
 		unsigned int m_PosX{};
 		unsigned int m_PosY{};
-		bool m_EnableErosion{};
+		bool m_EnableErosion{ false };
 	};
 }

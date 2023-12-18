@@ -9,6 +9,7 @@
 #include <WorldShape/SquarePeak.h>
 
 #include "../ErosionAlgorithms/HansBeyer.h"
+#include "../ErosionAlgorithms/VelocityField.h"
 
 #include <ImGui/imgui.h>
 
@@ -47,7 +48,7 @@ void Erosion::TerrainGeneratorComponent::Awake()
 	m_Gen.GetHeightMap().SetBlendMode(that::HeightMap::BlendMode::Multiply);
 
 	// Create erosion algorithm
-	m_pErosion = std::make_unique<HansBeyer>();
+	m_pErosion = std::make_unique<VelocityField>();
 }
 
 void Erosion::TerrainGeneratorComponent::OnGUI()
