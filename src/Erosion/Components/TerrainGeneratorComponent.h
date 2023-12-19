@@ -27,10 +27,12 @@ namespace Erosion
 		void Generate() const;
 
 		that::Generator m_Gen{};
+		that::Generator m_AfterGen{};
 		std::unique_ptr<ITerrainGenerator> m_pErosion{};
 
 		unsigned int m_PosX{};
 		unsigned int m_PosY{};
 		bool m_EnableErosion{ false };
+		bool m_EnableDoublePerlin{ false };
 	};
 }
