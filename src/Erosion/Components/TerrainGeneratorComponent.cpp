@@ -10,6 +10,7 @@
 
 #include "../ErosionAlgorithms/HansBeyer.h"
 #include "../ErosionAlgorithms/VelocityField.h"
+#include "../ErosionAlgorithms/RiverLand.h"
 
 #include <ImGui/imgui.h>
 
@@ -48,7 +49,7 @@ void Erosion::TerrainGeneratorComponent::Awake()
 	m_Gen.GetHeightMap().SetBlendMode(that::HeightMap::BlendMode::Multiply);
 
 	// Create erosion algorithm
-	m_pErosion = std::make_unique<VelocityField>();
+	m_pErosion = std::make_unique<RiverLand>();
 }
 
 void Erosion::TerrainGeneratorComponent::OnGUI()
