@@ -30,11 +30,12 @@ void Erosion::TerrainGeneratorComponent::Awake()
 	const float multiplier{ 2.0f };
 
 	that::NoiseMap noise{};
-	noise.GetGraph().AddNode(0.0f, 0.2f);
-	noise.GetGraph().AddNode(0.5f, 0.3f);
-	noise.GetGraph().AddNode(1.0f, 1.0f);
-	noise.GetPerlin().AddOctave(1.0f, 40.0f * multiplier);
-	noise.GetPerlin().AddOctave(0.5f, 40.0f * multiplier);
+	noise.GetGraph().AddNode(0.0f, 0.001f);
+	noise.GetGraph().AddNode(0.5f, 0.05f);
+	noise.GetGraph().AddNode(1.0f, 0.2f);
+	noise.GetPerlin().AddOctave(1.0f, 10.0f * multiplier);
+	noise.GetPerlin().AddOctave(1.0f, 5.0f * multiplier);
+	noise.GetPerlin().AddOctave(1.0f, 2.0f * multiplier);
 	m_Gen.GetHeightMap().AddNoiseMap(noise);
 
 	that::NoiseMap continentalNess{};
@@ -46,7 +47,7 @@ void Erosion::TerrainGeneratorComponent::Awake()
 	m_Gen.GetHeightMap().AddNoiseMap(continentalNess);
 
 	// Set the blendmode for the noisemaps
-	m_Gen.GetHeightMap().SetBlendMode(that::HeightMap::BlendMode::Multiply);
+	m_Gen.GetHeightMap().SetBlendMode(that::HeightMap::BlendMode::Add);
 
 	// Create erosion algorithm
 	m_pErosion = std::make_unique<RiverLand>();
