@@ -186,5 +186,5 @@ void Erosion::RiverLand::GetHeights(std::vector<float>& heights)
 void Erosion::RiverLand::OnGUI()
 {
 	ImGui::SliderFloat("RiverHeight", &m_RiverHeight, 0.0f, 0.5f, "%.5f");
-	ImGui::SliderFloat("Cliff", &m_CliffThreshold, 0.0f, 0.005f, "%.5f");
+	ImGui::SliderFloat("Cliff", &m_CliffThreshold, 0.0f, 0.015f, "%.5f");
 }
