@@ -17,6 +17,7 @@ struct VS_OUTPUT {
 	float4 pos : SV_POSITION;
     float3 normal : NORMAL;
     float4 lPos : TEXCOORD1;
+    float height : HEIGHT;
 };
 
 SamplerState samLinear
@@ -132,14 +133,14 @@ VS_OUTPUT VS(VS_INPUT input)
     float2 heightMapPos = input.uv;
 	// Step 1:	convert position into float4 and multiply with matWorldViewProj
     float4 texColor = gHeightMap[heightMapPos];
-    float height = RGBAtoUINT(texColor) * gMaxHeight;
+    output.height = RGBAtoUINT(texColor) * gMaxHeight;
     	
-    float L = GetNeighbouringHeight(height, heightMapPos, -1.0f, 0.0f);
-    float R = GetNeighbouringHeight(height, heightMapPos, 1.0f, 0.0f);
-    float T = GetNeighbouringHeight(height, heightMapPos, 0.0f, 1.0f);
-    float B = GetNeighbouringHeight(height, heightMapPos, 0.0f, -1.0f);
+    float L = GetNeighbouringHeight(output.height, heightMapPos, -1.0f, 0.0f);
+    float R = GetNeighbouringHeight(output.height, heightMapPos, 1.0f, 0.0f);
+    float T = GetNeighbouringHeight(output.height, heightMapPos, 0.0f, 1.0f);
+    float B = GetNeighbouringHeight(output.height, heightMapPos, 0.0f, -1.0f);
 	
-    output.pos = mul(float4(input.pos + float3(0, height, 0), 1.0f), gWorldViewProj);
+    output.pos = mul(float4(input.pos + float3(0, output.height, 0), 1.0f), gWorldViewProj);
 	// Step 2:	rotate the normal: NO TRANSLATION
 	//			this is achieved by clipping the 4x4 to a 3x3 matrix, 
 	//			thus removing the postion row of the matrix
@@ -161,7 +162,15 @@ float4 PS(VS_OUTPUT input) : SV_TARGET
     float shadowValue = EvaluateShadowMap(input.lPos);
 	
 	float3 color_rgb = gColor.rgb;
-	float color_a = gColor.a;
+    if (input.height < 0.0001f)
+    {
+        color_rgb.r = 0.3f;
+        color_rgb.g = 0.3f;
+        color_rgb.b = 0.8f;
+    }
+
+    
+    float color_a = gColor.a;
 
 	//HalfLambert Diffuse :)
 	float diffuseStrength = dot(input.normal, -gLightDirection);
