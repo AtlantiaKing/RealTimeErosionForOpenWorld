@@ -21,7 +21,9 @@ namespace Erosion
 			bool isChecked{};
 		};
 
-		float m_RiverHeight{ 0.35f };
+		float m_RiverHeight{ 0.12f };
+		float m_Divider{ 128.0f };
 		float m_CliffThreshold{ 0.0035f };
+		bool m_DoCliffDetection{};
 	};
 }

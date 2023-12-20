@@ -91,89 +91,118 @@ void Erosion::RiverLand::GetHeights(std::vector<float>& heights)
 	}
 
 	// Cliff removal
-	std::set<int> cliffCellsUnique{};
-	std::queue<int> cliffCells{};
-	for (RiverLandCell& cell : cells)
+	if (m_DoCliffDetection)
 	{
-		// Get the idx and height of the current cell
-		const int cellIdx{ cell.x + cell.z * terrainSize };
-		const float height{ heights[cellIdx] };
-
-		// Find the neighbour with the highest point
-		float highestPeak{};
-		int highestNeighbour{};
-		for (int x{ -1 }; x < 1; ++x)
+		std::set<int> cliffCellsUnique{};
+		std::queue<int> cliffCells{};
+		for (RiverLandCell& cell : cells)
 		{
-			for (int z{ -1 }; z < 1; ++z)
+			// Get the idx and height of the current cell
+			const int cellIdx{ cell.x + cell.z * terrainSize };
+			const float height{ heights[cellIdx] };
+
+			// Find the neighbour with the highest point
+			float highestPeak{};
+			int highestNeighbour{};
+			for (int x{ -1 }; x < 1; ++x)
 			{
-				if (abs(x) == 1 && abs(z) == 1) continue;
-				if (x == 0 && z == 0) continue;
-
-				if (cell.x + x < 0 || cell.x + x >= terrainSize) continue;
-				if (cell.z + z < 0 || cell.z + z >= terrainSize) continue;
-
-				const int neighbourIdx{ cell.x + x + (cell.z + z) * terrainSize };
-				const float neighbourHeight{ heights[neighbourIdx] };
-				if (highestPeak < neighbourHeight)
+				for (int z{ -1 }; z < 1; ++z)
 				{
-					highestPeak = neighbourHeight;
-					highestNeighbour = neighbourIdx;
+					if (abs(x) == 1 && abs(z) == 1) continue;
+					if (x == 0 && z == 0) continue;
+
+					if (cell.x + x < 0 || cell.x + x >= terrainSize) continue;
+					if (cell.z + z < 0 || cell.z + z >= terrainSize) continue;
+
+					const int neighbourIdx{ cell.x + x + (cell.z + z) * terrainSize };
+					const float neighbourHeight{ heights[neighbourIdx] };
+					if (highestPeak < neighbourHeight)
+					{
+						highestPeak = neighbourHeight;
+						highestNeighbour = neighbourIdx;
+					}
+				}
+			}
+
+			// If none of the neighbours is higher then the cliff threshold, continue to the next cell
+			if (highestPeak - height < m_CliffThreshold) continue;
+
+			// Add the cell that is higher then the cliff threshold to the queue
+			cliffCells.push(cellIdx);
+			cliffCellsUnique.insert(cellIdx);
+
+			// Set the height of the current cell so it is inside the cliff threshold from its highest neighbour
+			heights[cellIdx] = highestPeak - m_CliffThreshold;
+		}
+
+		// While there are still cells that form a cliff
+		while (!cliffCells.empty())
+		{
+			// Get the first cell idx in the queue
+			int cellIdx{ cliffCells.front() };
+			cliffCells.pop();
+			cliffCellsUnique.erase(cellIdx);
+
+			// Get the current cell
+			const RiverLandCell& cell{ cells[cellIdx] };
+
+			// For each neighbour
+			for (int x{ -1 }; x < 1; ++x)
+			{
+				for (int z{ -1 }; z < 1; ++z)
+				{
+					// Discard diagonal neighbours and itself
+					if (abs(x) == 1 && abs(z) == 1) continue;
+					if (x == 0 && z == 0) continue;
+
+					// Bounds check on the neighbour coordinates
+					if (cell.x + x < 0 || cell.x + x >= terrainSize) continue;
+					if (cell.z + z < 0 || cell.z + z >= terrainSize) continue;
+
+					const int neighbourIdx{ cell.x + x + (cell.z + z) * terrainSize };
+
+					// If the neighbour is within cliff threshold, continue to the next neighbour
+					if (heights[neighbourIdx] > heights[cellIdx] - m_CliffThreshold) continue;
+
+					// Add the neighbour to the queue if it isn't already added
+					if (!cliffCellsUnique.contains(neighbourIdx))
+					{
+						cliffCells.push(neighbourIdx);
+						cliffCellsUnique.insert(neighbourIdx);
+					}
+
+					// Move the neighbour so it is within the cliff threshold of the current cell
+					heights[neighbourIdx] = heights[cellIdx] - m_CliffThreshold;
 				}
 			}
 		}
-
-		// If none of the neighbours is higher then the cliff threshold, continue to the next cell
-		if (highestPeak - height < m_CliffThreshold) continue;
-
-		// Add the cell that is higher then the cliff threshold to the queue
-		cliffCells.push(cellIdx);
-		cliffCellsUnique.insert(cellIdx);
-
-		// Set the height of the current cell so it is inside the cliff threshold from its highest neighbour
-		heights[cellIdx] = highestPeak - m_CliffThreshold;
 	}
 
-	// While there are still cells that form a cliff
-	while (!cliffCells.empty())
+	// Blur the heightmap
+	std::vector<float> blurredHeights(heights.size());
+	for (int x{}; x < terrainSize; ++x)
 	{
-		// Get the first cell idx in the queue
-		int cellIdx{ cliffCells.front() };
-		cliffCells.pop();
-		cliffCellsUnique.erase(cellIdx);
-
-		// Get the current cell
-		const RiverLandCell& cell{ cells[cellIdx] };
-
-		// For each neighbour
-		for (int x{ -1 }; x < 1; ++x)
+		for (int z{}; z < terrainSize; ++z)
 		{
-			for (int z{ -1 }; z < 1; ++z)
+			constexpr int blurSize{ 9 };
+			constexpr float kernel{ 1.0f / (blurSize * blurSize) };
+			float sum{};
+			for (int k{}; k < blurSize; ++k)
 			{
-				// Discard diagonal neighbours and itself
-				if (abs(x) == 1 && abs(z) == 1) continue;
-				if (x == 0 && z == 0) continue;
-
-				// Bounds check on the neighbour coordinates
-				if (cell.x + x < 0 || cell.x + x >= terrainSize) continue;
-				if (cell.z + z < 0 || cell.z + z >= terrainSize) continue;
-
-				const int neighbourIdx{ cell.x + x + (cell.z + z) * terrainSize };
-
-				// If the neighbour is within cliff threshold, continue to the next neighbour
-				if (heights[neighbourIdx] > heights[cellIdx] - m_CliffThreshold) continue;
-
-				// Add the neighbour to the queue if it isn't already added
-				if (!cliffCellsUnique.contains(neighbourIdx))
+				for (int l{}; l < blurSize; ++l)
 				{
-					cliffCells.push(neighbourIdx);
-					cliffCellsUnique.insert(neighbourIdx);
-				}
+					int row{ x + k - blurSize / 2 };
+					int col{ z + l - blurSize / 2 };
 
-				// Move the neighbour so it is within the cliff threshold of the current cell
-				heights[neighbourIdx] = heights[cellIdx] - m_CliffThreshold;
+					if (row < 0 || row >= terrainSize || col < 0 || col >= terrainSize) continue;
+
+					sum += heights[row + col * terrainSize] * kernel;
+				}
 			}
+			blurredHeights[x + z * terrainSize] = sum;
 		}
 	}
+	heights = std::move(blurredHeights);
 }
 
 void Erosion::RiverLand::OnGUI()
@@ -181,4 +210,5 @@ void Erosion::RiverLand::OnGUI()
 	ImGui::SliderFloat("RiverHeight", &m_RiverHeight, 0.0f, 0.5f, "%.5f");
 	ImGui::SliderFloat("Height Divider", &m_Divider, 16.0f, 1024.0f);
 	ImGui::SliderFloat("Cliff", &m_CliffThreshold, 0.0f, 0.015f, "%.5f");
+	ImGui::Checkbox("Do Cliff Detection", &m_DoCliffDetection);
 }
