@@ -83,18 +83,11 @@ void Erosion::RiverLand::GetHeights(std::vector<float>& heights)
 		}
 	}
 
-	// Find the farthest distance from a water source
-	float highest{};
+	// Normalize the distance so the farthest distance is 1.0 and set the squared distance as the height of the cell
 	for (RiverLandCell& cell : cells)
 	{
-		const float height{ cell.distance };
-		if (highest < height) highest = height;
-	}
-
-	// Normalize the distance so the farthest distance is 1.0 and set the distance as the height of the cell
-	for (RiverLandCell& cell : cells)
-	{
-		heights[cell.x + cell.z * terrainSize] = cell.distance / highest;
+		const float normalizedDistance{ cell.distance * cell.slope / m_Divider };
+		heights[cell.x + cell.z * terrainSize] = normalizedDistance;
 	}
 
 	// Cliff removal
@@ -186,5 +179,6 @@ void Erosion::RiverLand::GetHeights(std::vector<float>& heights)
 void Erosion::RiverLand::OnGUI()
 {
 	ImGui::SliderFloat("RiverHeight", &m_RiverHeight, 0.0f, 0.5f, "%.5f");
+	ImGui::SliderFloat("Height Divider", &m_Divider, 16.0f, 1024.0f);
 	ImGui::SliderFloat("Cliff", &m_CliffThreshold, 0.0f, 0.015f, "%.5f");
 }
