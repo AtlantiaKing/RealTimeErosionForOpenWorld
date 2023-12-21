@@ -21,18 +21,33 @@ namespace Erosion
 		TerrainGeneratorComponent(TerrainGeneratorComponent&& other) = delete;
 
 	private:
+		enum class ErosionAlgorithm
+		{
+			HansBeyer,
+			VelocityField,
+			RiverLand
+		};
+		inline const static int m_NrAlgorithms{ 3 };
+		inline const static char* m_ErosionAlgorithmStr[m_NrAlgorithms] { "Hans Beyer", "Velocity Field", "River Land" };
+
 		virtual void Awake() override;
 		virtual void OnGUI() override;
 
+		void GenerateNewPerlin();
+		void SetNewAlgorithm();
 		void Generate() const;
 
-		that::Generator m_Gen{};
+		std::unique_ptr<that::Generator> m_pGen{};
 		that::Generator m_AfterGen{};
 		std::unique_ptr<ITerrainGenerator> m_pErosion{};
 
+		float m_PerlinMultiplier{ 2.0f };
+		int m_SelectedAlgorithmIdx{};
 		unsigned int m_PosX{};
 		unsigned int m_PosY{};
 		bool m_EnableErosion{ false };
 		bool m_EnableDoublePerlin{ false };
+
+		bool m_IsChoosingNewAlgorithm{};
 	};
 }
