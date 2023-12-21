@@ -179,20 +179,19 @@ void Erosion::RiverLand::GetHeights(std::vector<float>& heights)
 	}
 
 	// Blur the heightmap
+	const float kernel{ 1.0f / (m_BlurSize * m_BlurSize) };
 	std::vector<float> blurredHeights(heights.size());
 	for (int x{}; x < terrainSize; ++x)
 	{
 		for (int z{}; z < terrainSize; ++z)
 		{
-			constexpr int blurSize{ 9 };
-			constexpr float kernel{ 1.0f / (blurSize * blurSize) };
 			float sum{};
-			for (int k{}; k < blurSize; ++k)
+			for (int k{}; k < m_BlurSize; ++k)
 			{
-				for (int l{}; l < blurSize; ++l)
+				for (int l{}; l < m_BlurSize; ++l)
 				{
-					int row{ x + k - blurSize / 2 };
-					int col{ z + l - blurSize / 2 };
+					int row{ x + k - m_BlurSize / 2 };
+					int col{ z + l - m_BlurSize / 2 };
 
 					if (row < 0 || row >= terrainSize || col < 0 || col >= terrainSize) continue;
 
@@ -207,8 +206,11 @@ void Erosion::RiverLand::GetHeights(std::vector<float>& heights)
 
 void Erosion::RiverLand::OnGUI()
 {
+	ImGui::Spacing();
+	ImGui::Text("River Land Settings");
 	ImGui::SliderFloat("RiverHeight", &m_RiverHeight, 0.0f, 0.5f, "%.5f");
 	ImGui::SliderFloat("Height Divider", &m_Divider, 16.0f, 1024.0f);
-	ImGui::SliderFloat("Cliff", &m_CliffThreshold, 0.0f, 0.015f, "%.5f");
+	ImGui::SliderInt("Blur Intensity", &m_BlurSize, 1, 15);
+	ImGui::SliderFloat("Cliff Threshold", &m_CliffThreshold, 0.0f, 0.015f, "%.5f");
 	ImGui::Checkbox("Do Cliff Detection", &m_DoCliffDetection);
 }

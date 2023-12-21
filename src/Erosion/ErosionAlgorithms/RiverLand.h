@@ -24,6 +24,7 @@ namespace Erosion
 		float m_RiverHeight{ 0.12f };
 		float m_Divider{ 128.0f };
 		float m_CliffThreshold{ 0.0035f };
+		int m_BlurSize{ 9 };
 		bool m_DoCliffDetection{};
 	};
 }
