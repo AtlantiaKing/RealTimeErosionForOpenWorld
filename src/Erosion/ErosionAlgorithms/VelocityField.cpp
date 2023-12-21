@@ -260,7 +260,7 @@ void Erosion::VelocityField::OnGUI()
 	ImGui::SliderInt("Drops per Cycle", &m_DropletsPerCycle, 0, 100);
 	ImGui::SliderFloat("Water Increment", &m_WaterIncrement, 0.0f, 0.01f, "%0.10f");
 	ImGui::SliderFloat("Gravity", &m_Gravity, -10.0f, 10.0f);
-	ImGui::SliderFloat("Capacity", &m_Capacity, 0.0f, 0.001f, "%0.10f");
+	ImGui::SliderFloat("Capacity", &m_Capacity, 0.0f, 0.1f, "%0.10f");
 	ImGui::SliderFloat("Erosion", &m_Erosion, 0.0f, 1.0f);
 	ImGui::SliderFloat("Deposition", &m_Deposition, 0.0f, 1.0f);
 	ImGui::SliderFloat("Evaporation", &m_Evaporation, 0.0f, 1.0f);
