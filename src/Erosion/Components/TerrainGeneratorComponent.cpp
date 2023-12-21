@@ -141,7 +141,7 @@ void Erosion::TerrainGeneratorComponent::Generate() const
 	{
 		for (unsigned int z{}; z < terrainSize; ++z)
 		{
-			float noiseValue{ generator.GetHeight(static_cast<float>(x + m_PosX) / 4.0f, static_cast<float>(z + m_PosY) / 4.0f) };
+			float noiseValue{ generator.GetHeight(static_cast<float>(x + m_PosX), static_cast<float>(z + m_PosY)) };
 
 			heights[x + z * terrainSize] = noiseValue;
 		}
@@ -167,7 +167,7 @@ void Erosion::TerrainGeneratorComponent::Generate() const
 				if (height < FLT_EPSILON) continue;
 
 				// Calculate the perlin offset
-				const float perlin{ m_AfterGen.GetHeight(static_cast<float>(x + m_PosX) / 4.0f, static_cast<float>(z + m_PosY) / 4.0f) / 10.0f };
+				const float perlin{ m_AfterGen.GetHeight(static_cast<float>(x + m_PosX), static_cast<float>(z + m_PosY)) };
 
 				// Apply an offset at the beaches to avoid creating cliffs
 				const float offset{ height < 0.1f ? height / 0.1f : 1.0f };
