@@ -100,8 +100,24 @@ void Erosion::TerrainGeneratorComponent::OnGUI()
 {
 	ImGui::Begin("Terrain Generator");
 
+	// Regenerate button
 	if (ImGui::Button("Generate")) Generate();
 
+	ImGui::Spacing();
+
+	// Perlin Customization
+	if (ImGui::SliderFloat("Perlin Size", &m_PerlinMultiplier, 0.01f, 100.0f))
+	{
+		GenerateNewPerlin();
+	}
+	if (ImGui::Button("New seed"))
+	{
+		GenerateNewPerlin();
+	}
+
+	ImGui::Spacing();
+
+	// Erosion algorithm drop down menu
 	if (m_IsChoosingNewAlgorithm)
 	{
 		if (ImGui::ListBox("Erosion Algorithm", &m_SelectedAlgorithmIdx, m_ErosionAlgorithmStr, m_NrAlgorithms))
@@ -118,11 +134,15 @@ void Erosion::TerrainGeneratorComponent::OnGUI()
 		}
 	}
 
+	ImGui::Spacing();
+
+	// Global erosion customization
 	ImGui::Checkbox("Enable Erosion", &m_EnableErosion);
 	ImGui::Checkbox("Enable Double Perlin", &m_EnableDoublePerlin);
 	ImGui::DragScalar("Pos X", ImGuiDataType_::ImGuiDataType_U32, &m_PosX);
 	ImGui::DragScalar("Pos Y", ImGuiDataType_::ImGuiDataType_U32, &m_PosY);
 
+	// Implementation specific customization
 	m_pErosion->OnGUI();
 
 	ImGui::End();
