@@ -46,7 +46,7 @@ void Erosion::TerrainGeneratorComponent::GenerateNewPerlin()
 	const unsigned int terrainSize{ static_cast<unsigned int>(sqrt(pTerrain->GetHeights().size())) };
 
 	// Create random seed
-	srand(static_cast<unsigned int>(time(nullptr)));
+	srand(seed);
 
 	m_pGen = std::make_unique<that::Generator>();
 
@@ -112,6 +112,7 @@ void Erosion::TerrainGeneratorComponent::OnGUI()
 	}
 	if (ImGui::Button("New seed"))
 	{
+		seed = static_cast<unsigned int>(time(nullptr));
 		GenerateNewPerlin();
 	}
 

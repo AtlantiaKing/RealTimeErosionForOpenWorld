@@ -41,6 +41,8 @@ namespace Erosion
 		that::Generator m_AfterGen{};
 		std::unique_ptr<ITerrainGenerator> m_pErosion{};
 
+		unsigned int seed{};
+
 		float m_PerlinMultiplier{ 8.0f };
 		int m_SelectedAlgorithmIdx{};
 		unsigned int m_PosX{};
