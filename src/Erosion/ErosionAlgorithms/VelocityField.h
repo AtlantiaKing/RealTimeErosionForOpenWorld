@@ -41,5 +41,6 @@ namespace Erosion
 		float m_Deposition{ 0.001f };
 		float m_Evaporation{ 0.000009f };
 		float m_FluxEpsilon{ 0.000001f };
+		float m_TimeStep{ 1.0f };
 	};
 }

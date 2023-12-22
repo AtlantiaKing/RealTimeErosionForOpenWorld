@@ -12,6 +12,11 @@ void Erosion::VelocityField::GetHeights(std::vector<float>& heights)
 		cells[i] = Cell { &heights[i] };
 	}
 
+	// Erosion radius data
+	constexpr int m_ErosionRadius{ 5 };
+	std::vector<float> radiusWeights{};
+	radiusWeights.resize(m_ErosionRadius * m_ErosionRadius);
+
 	// Retrieve the terrain size
 	const int terrainSize{ static_cast<int>(sqrtf(static_cast<float>(heights.size()))) };
 
@@ -22,7 +27,7 @@ void Erosion::VelocityField::GetHeights(std::vector<float>& heights)
 		{
 			const int waterCellIdx{ (rand() % terrainSize) + (rand() % terrainSize) * terrainSize };
 			Cell& waterCell{ cells[waterCellIdx] };
-			waterCell.water += m_WaterIncrement;
+			waterCell.water += m_WaterIncrement * m_TimeStep;
 		}
 
 		// Calculate flux
@@ -42,7 +47,7 @@ void Erosion::VelocityField::GetHeights(std::vector<float>& heights)
 					heightDiffL = *cell.height + cell.water - *leftCell.height - leftCell.water;
 				}
 				// Calculate the flux
-				float fluxL{ std::max(0.0f, cell.leftFlux + m_PipeArea * (m_Gravity * heightDiffL) / m_PipeLength) };
+				float fluxL{ std::max(0.0f, cell.leftFlux + m_TimeStep * m_PipeArea * (m_Gravity * heightDiffL) / m_PipeLength) };
 				// Fix floating point errors
 				fluxL = fluxL < m_FluxEpsilon ? 0.0f : fluxL;
 
@@ -54,7 +59,7 @@ void Erosion::VelocityField::GetHeights(std::vector<float>& heights)
 					heightDiffR = *cell.height + cell.water - *rightCell.height - rightCell.water;
 				}
 				// Calculate the flux
-				float fluxR{ std::max(0.0f, cell.rightFlux + m_PipeArea * (m_Gravity * heightDiffR) / m_PipeLength) };
+				float fluxR{ std::max(0.0f, cell.rightFlux + m_TimeStep * m_PipeArea * (m_Gravity * heightDiffR) / m_PipeLength) };
 				// Fix floating point errors
 				fluxR = fluxR < m_FluxEpsilon ? 0.0f : fluxR;
 
@@ -66,7 +71,7 @@ void Erosion::VelocityField::GetHeights(std::vector<float>& heights)
 					heightDiffT = *cell.height + cell.water - *topCell.height - topCell.water;
 				}
 				// Calculate the flux
-				float fluxT{ std::max(0.0f, cell.topFlux + m_PipeArea * (m_Gravity * heightDiffT) / m_PipeLength) };
+				float fluxT{ std::max(0.0f, cell.topFlux + m_TimeStep * m_PipeArea * (m_Gravity * heightDiffT) / m_PipeLength) };
 				// Fix floating point errors
 				fluxT = fluxT < m_FluxEpsilon ? 0.0f : fluxT;
 
@@ -78,14 +83,14 @@ void Erosion::VelocityField::GetHeights(std::vector<float>& heights)
 					heightDiffB = *cell.height + cell.water - *bottomCell.height - bottomCell.water;
 				}
 				// Calculate the flux
-				float fluxB{ std::max(0.0f, cell.bottomFlux + m_PipeArea * (m_Gravity * heightDiffB) / m_PipeLength) };
+				float fluxB{ std::max(0.0f, cell.bottomFlux + m_TimeStep * m_PipeArea * (m_Gravity * heightDiffB) / m_PipeLength) };
 				// Fix floating point errors
 				fluxB = fluxB < m_FluxEpsilon ? 0.0f : fluxB;
 
 				// Calculate the total flux sum
 				const float fluxSum{ fluxL + fluxR + fluxT + fluxB };
 				// Calculate the limit multiplier so water in the current cell won't go negative
-				const float k{ fluxSum < FLT_EPSILON ? 0.0f : std::min(1.0f, cell.water / (fluxL + fluxR + fluxT + fluxB)) };
+				const float k{ fluxSum < FLT_EPSILON ? 0.0f : std::min(1.0f, cell.water / fluxSum) };
 
 				// Calculate the final flux values by multiplying the calculated flux values with the limit multiplier
 				cell.leftFlux = fluxL * k;
@@ -118,9 +123,8 @@ void Erosion::VelocityField::GetHeights(std::vector<float>& heights)
 				};
 
 				// Calculate new water height and average water height over the current cycle
-				const float prevWaterHeight{ cell.water };
-				cell.water = cell.water + volumeChange;
-				const float averageWaterHeight{ (prevWaterHeight + cell.water) / 2.0f };
+				const float averageWaterHeight{ cell.water + volumeChange / 2.0f };
+				cell.water += volumeChange;
 
 				// Calculate water movement per direction
 				const float waterMovementX{ (incomingFluxL + cell.rightFlux - incomingFluxR - cell.leftFlux) / 2.0f };
@@ -160,7 +164,62 @@ void Erosion::VelocityField::GetHeights(std::vector<float>& heights)
 				{
 					const float removedSediment{ m_Erosion * (m_Capacity - cell.sediment) };
 
-					*cell.height -= removedSediment;
+
+					float totalWeight{};
+					float smallestDistance{ FLT_MAX };
+					float highestDistance{};
+
+					// Calculate the weights of all the grid points near the droplet and their combined total weight
+					const int halfErosionRadius{ m_ErosionRadius / 2 };
+					for (int radX{}; radX < m_ErosionRadius; ++radX)
+					{
+						for (int radZ{}; radZ < m_ErosionRadius; ++radZ)
+						{
+							const int xDisplacement{ radX - halfErosionRadius };
+							const int zDisplacement{ radZ - halfErosionRadius };
+
+							const int xPos = x + xDisplacement;
+							const int zPos = z + zDisplacement;
+
+							if (xPos < 0 || zPos < 0 || xPos >= terrainSize || zPos >= terrainSize) continue;
+
+							const float distance{ sqrtf(static_cast<float>(xDisplacement * xDisplacement + zDisplacement * zDisplacement)) };
+							const int radiusIdx{ radX + radZ * m_ErosionRadius };
+							radiusWeights[radiusIdx] = distance;
+
+							if (smallestDistance > distance) smallestDistance = distance;
+							if (highestDistance < distance) highestDistance = distance;
+						}
+					}
+
+					// Reverse the weights
+					for (float& weight : radiusWeights)
+					{
+						weight = 1.0f - (weight - smallestDistance) / (highestDistance - smallestDistance);
+						totalWeight += weight;
+					}
+
+					// Normalize the weights
+					for (float& weight : radiusWeights)
+					{
+						weight /= totalWeight;
+					}
+
+					// Remove the sediment from all the grid positions in the radius of the droplet
+					for (int radX{}; radX < m_ErosionRadius; ++radX)
+					{
+						for (int radZ{}; radZ < m_ErosionRadius; ++radZ)
+						{
+							const int xPos = radX - halfErosionRadius;
+							const int zPos = radZ - halfErosionRadius;
+
+							if (x + xPos < 0 || z + zPos < 0 || x + xPos >= terrainSize || z + zPos >= terrainSize) continue;
+
+							const int radiusIdx{ radX + radZ * m_ErosionRadius };
+							*cells[x + xPos + (z + zPos) * terrainSize].height -= removedSediment * radiusWeights[radiusIdx];
+						}
+					}
+
 					cell.sediment += removedSediment;
 				}
 				else
@@ -182,18 +241,19 @@ void Erosion::VelocityField::GetHeights(std::vector<float>& heights)
 				const int cellIdx{ x + y * terrainSize };
 				Cell& cell{ cells[cellIdx] };
 
-				// Calculate the normalize multiplier for the velocity 
-				const float velocityMagnitude{ sqrtf(cell.velocityX * cell.velocityX + cell.velocityY * cell.velocityY) };
-				const float normalizeFactor{ 1.0f / velocityMagnitude };
-
 				// Find the previous cell depending on the velocity (e.g. if moving forward, get the back cell)
-				const int incomingSedimentX{ cell.velocityX * normalizeFactor < -0.5f ? x + 1 : (cell.velocityX * normalizeFactor > 0.5f ? x - 1 : x) };
-				const int incomingSedimentY{ cell.velocityY * normalizeFactor < -0.5f ? y + 1 : (cell.velocityY * normalizeFactor > 0.5f ? y - 1 : y) };
+				const int incomingSedimentX{ static_cast<int>(x + 0.5f - cell.velocityX * m_TimeStep) };
+				const int incomingSedimentY{ static_cast<int>(y + 0.5f - cell.velocityY * m_TimeStep) };
+
+				if (abs(cell.velocityX) < 0.5f && abs(cell.velocityY) < 0.5f)
+				{
+					int test{};
+					test;
+				}
 
 				if (incomingSedimentX < 0 || incomingSedimentX >= terrainSize || incomingSedimentY < 0 || incomingSedimentY >= terrainSize)
 				{
 					// If the cell doesn't exist, find the four closest neighbouring cells and take the average of their sediment values
-
 					int closestX[4]{};
 					int closestY[4]{};
 					float closestSediments[4]{};
@@ -230,7 +290,8 @@ void Erosion::VelocityField::GetHeights(std::vector<float>& heights)
 				else
 				{
 					// Move the sediment from the previous cell to the next one
-					const int incomingSedimentIdx{ static_cast<int>(incomingSedimentX) + static_cast<int>(incomingSedimentY) * terrainSize };
+					const int incomingSedimentIdx{ incomingSedimentX + incomingSedimentY * terrainSize };
+
 					cell.sediment = cells[incomingSedimentIdx].sediment;
 				}
 
@@ -256,12 +317,15 @@ void Erosion::VelocityField::OnGUI()
 {
 	ImGui::Spacing();
 	ImGui::Text("Velocity Field Settings");
-	ImGui::SliderInt("Nr Cycles", &m_Cycles, 0, 100);
+	ImGui::SliderInt("Nr Cycles", &m_Cycles, 0, 1000);
 	ImGui::SliderInt("Drops per Cycle", &m_DropletsPerCycle, 0, 100);
-	ImGui::SliderFloat("Water Increment", &m_WaterIncrement, 0.0f, 0.01f, "%0.10f");
+	ImGui::SliderFloat("Water Increment", &m_WaterIncrement, 0.0f, 0.5f, "%0.10f");
 	ImGui::SliderFloat("Gravity", &m_Gravity, -10.0f, 10.0f);
 	ImGui::SliderFloat("Capacity", &m_Capacity, 0.0f, 0.1f, "%0.10f");
 	ImGui::SliderFloat("Erosion", &m_Erosion, 0.0f, 1.0f);
 	ImGui::SliderFloat("Deposition", &m_Deposition, 0.0f, 1.0f);
 	ImGui::SliderFloat("Evaporation", &m_Evaporation, 0.0f, 1.0f);
+	ImGui::SliderFloat("Time step", &m_TimeStep, 0.0f, 5.0f);
+	ImGui::SliderFloat("Pipe length", &m_PipeLength, 0.0f, 5.0f);
+	ImGui::SliderFloat("Pipe area", &m_PipeArea, 0.0f, 5.0f);
 }
