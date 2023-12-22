@@ -53,15 +53,6 @@ void Erosion::TerrainGeneratorComponent::GenerateNewPerlin()
 	// Create generator
 	m_pGen->SetSize(static_cast<float>(terrainSize));
 
-	that::NoiseMap noise{};
-	noise.GetGraph().AddNode(0.0f, 0.001f);
-	noise.GetGraph().AddNode(0.5f, 0.05f);
-	noise.GetGraph().AddNode(1.0f, 0.2f);
-	noise.GetPerlin().AddOctave(1.0f, 10.0f * m_PerlinMultiplier);
-	noise.GetPerlin().AddOctave(1.0f, 5.0f * m_PerlinMultiplier);
-	noise.GetPerlin().AddOctave(1.0f, 2.0f * m_PerlinMultiplier);
-	m_pGen->GetHeightMap().AddNoiseMap(noise);
-
 	that::NoiseMap continentalNess{};
 	continentalNess.GetGraph().AddNode(0.0f, 0.1f);
 	continentalNess.GetGraph().AddNode(0.4f, 0.1f);
@@ -69,6 +60,18 @@ void Erosion::TerrainGeneratorComponent::GenerateNewPerlin()
 	continentalNess.GetGraph().AddNode(1.0f, 0.8f);
 	continentalNess.GetPerlin().AddOctave(1.0f, 100.0f * m_PerlinMultiplier);
 	m_pGen->GetHeightMap().AddNoiseMap(continentalNess);
+
+	if (m_DetailedPerlin)
+	{
+		that::NoiseMap noise{};
+		noise.GetGraph().AddNode(0.0f, 0.001f);
+		noise.GetGraph().AddNode(0.5f, 0.05f);
+		noise.GetGraph().AddNode(1.0f, 0.2f);
+		noise.GetPerlin().AddOctave(1.0f, 10.0f * m_PerlinMultiplier);
+		noise.GetPerlin().AddOctave(1.0f, 5.0f * m_PerlinMultiplier);
+		noise.GetPerlin().AddOctave(1.0f, 2.0f * m_PerlinMultiplier);
+		m_pGen->GetHeightMap().AddNoiseMap(noise);
+	}
 
 	// Set the blendmode for the noisemaps
 	m_pGen->GetHeightMap().SetBlendMode(that::HeightMap::BlendMode::Add);
@@ -106,6 +109,10 @@ void Erosion::TerrainGeneratorComponent::OnGUI()
 	ImGui::Spacing();
 
 	// Perlin Customization
+	if (ImGui::Checkbox("Enable detailed perlin", &m_DetailedPerlin))
+	{
+		GenerateNewPerlin();
+	}
 	if (ImGui::SliderFloat("Perlin Size", &m_PerlinMultiplier, 0.01f, 100.0f))
 	{
 		GenerateNewPerlin();

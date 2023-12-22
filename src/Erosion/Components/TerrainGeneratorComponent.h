@@ -47,6 +47,7 @@ namespace Erosion
 		int m_SelectedAlgorithmIdx{};
 		unsigned int m_PosX{};
 		unsigned int m_PosY{};
+		bool m_DetailedPerlin{ false };
 		bool m_EnableErosion{ false };
 		bool m_EnableDoublePerlin{ false };
 
