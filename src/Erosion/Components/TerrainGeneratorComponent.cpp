@@ -23,8 +23,8 @@ void Erosion::TerrainGeneratorComponent::Awake()
 	SetNewAlgorithm();
 
 	// Get the terrain size from the terrain component
-	leap::TerrainComponent* pTerrain{ GetGameObject()->GetComponent<leap::TerrainComponent>() };
-	const unsigned int terrainSize{ static_cast<unsigned int>(sqrt(pTerrain->GetHeights().size())) };
+	m_pTerrain = GetGameObject()->GetComponent<leap::TerrainComponent>();
+	m_TerrainSize = static_cast<unsigned int>(sqrt(m_pTerrain->GetHeights().size()));
 
 	// Create optional second perlin map
 	that::NoiseMap doublePerlin{};
@@ -36,22 +36,18 @@ void Erosion::TerrainGeneratorComponent::Awake()
 	doublePerlin.GetPerlin().AddOctave(1.0f, 2.0f * m_PerlinMultiplier);
 	m_AfterGen.GetHeightMap().AddNoiseMap(doublePerlin);
 
-	m_AfterGen.SetSize(static_cast<float>(terrainSize));
+	m_AfterGen.SetSize(static_cast<float>(m_TerrainSize));
 }
 
 void Erosion::TerrainGeneratorComponent::GenerateNewPerlin()
 {
-	// Get the terrain size from the terrain component
-	leap::TerrainComponent* pTerrain{ GetGameObject()->GetComponent<leap::TerrainComponent>() };
-	const unsigned int terrainSize{ static_cast<unsigned int>(sqrt(pTerrain->GetHeights().size())) };
-
 	// Create random seed
 	srand(seed);
 
 	m_pGen = std::make_unique<that::Generator>();
 
 	// Create generator
-	m_pGen->SetSize(static_cast<float>(terrainSize));
+	m_pGen->SetSize(static_cast<float>(m_TerrainSize));
 
 	that::NoiseMap continentalNess{};
 	continentalNess.GetGraph().AddNode(0.0f, 0.1f);
@@ -64,9 +60,9 @@ void Erosion::TerrainGeneratorComponent::GenerateNewPerlin()
 	if (m_DetailedPerlin)
 	{
 		that::NoiseMap noise{};
-		noise.GetGraph().AddNode(0.0f, 0.001f);
-		noise.GetGraph().AddNode(0.5f, 0.05f);
-		noise.GetGraph().AddNode(1.0f, 0.2f);
+		noise.GetGraph().AddNode(0.0f, m_DetailedPerlinMultiplier * 0.01f);
+		noise.GetGraph().AddNode(0.5f, m_DetailedPerlinMultiplier * 0.25f);
+		noise.GetGraph().AddNode(1.0f, m_DetailedPerlinMultiplier);
 		noise.GetPerlin().AddOctave(1.0f, 10.0f * m_PerlinMultiplier);
 		noise.GetPerlin().AddOctave(1.0f, 5.0f * m_PerlinMultiplier);
 		noise.GetPerlin().AddOctave(1.0f, 2.0f * m_PerlinMultiplier);
@@ -108,8 +104,22 @@ void Erosion::TerrainGeneratorComponent::OnGUI()
 
 	ImGui::Spacing();
 
+	// Terrain Component Customization
+	ImGui::DragScalar("Terrain Size", ImGuiDataType_::ImGuiDataType_U32, &m_TerrainSize);
+	ImGui::InputScalar("Quads Per Meter", ImGuiDataType_::ImGuiDataType_U32, &m_QuadsPerMeter);
+	if (ImGui::Button("Create new terrain"))
+	{
+		m_pTerrain->SetSize(m_TerrainSize, m_QuadsPerMeter);
+	}
+
+	ImGui::Spacing();
+
 	// Perlin Customization
 	if (ImGui::Checkbox("Enable detailed perlin", &m_DetailedPerlin))
+	{
+		GenerateNewPerlin();
+	}
+	if (ImGui::SliderFloat("Detailed perlin multiplier", &m_DetailedPerlinMultiplier, 0.0f, 1.0f, "%.5f"))
 	{
 		GenerateNewPerlin();
 	}
@@ -159,8 +169,7 @@ void Erosion::TerrainGeneratorComponent::OnGUI()
 void Erosion::TerrainGeneratorComponent::Generate() const
 {
 	// Get the size and height data from the terrain component
-	leap::TerrainComponent* pTerrain{ GetGameObject()->GetComponent<leap::TerrainComponent>() };
-	auto heights{ pTerrain->GetHeights() };
+	auto heights{ m_pTerrain->GetHeights() };
 	const unsigned int terrainSize{ static_cast<unsigned int>(sqrt(heights.size())) };
 
 	// Generate a terrain by perlin noise
@@ -207,5 +216,5 @@ void Erosion::TerrainGeneratorComponent::Generate() const
 	}
 
 	// Apply the new heightmap to the terrain component
-	pTerrain->SetHeights(heights);
+	m_pTerrain->SetHeights(heights);
 }

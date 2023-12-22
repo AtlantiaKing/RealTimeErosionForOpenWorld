@@ -7,6 +7,11 @@
 
 #include <memory>
 
+namespace leap
+{
+	class TerrainComponent;
+}
+
 namespace Erosion
 {
 	class TerrainGeneratorComponent final : public leap::Component
@@ -37,17 +42,21 @@ namespace Erosion
 		void SetNewAlgorithm();
 		void Generate() const;
 
+		leap::TerrainComponent* m_pTerrain{};
 		std::unique_ptr<that::Generator> m_pGen{};
 		that::Generator m_AfterGen{};
 		std::unique_ptr<ITerrainGenerator> m_pErosion{};
 
 		unsigned int seed{};
+		unsigned int m_TerrainSize{};
+		unsigned int m_QuadsPerMeter{};
 
 		float m_PerlinMultiplier{ 8.0f };
 		int m_SelectedAlgorithmIdx{};
 		unsigned int m_PosX{};
 		unsigned int m_PosY{};
 		bool m_DetailedPerlin{ false };
+		float m_DetailedPerlinMultiplier{ 0.1f };
 		bool m_EnableErosion{ false };
 		bool m_EnableDoublePerlin{ false };
 
