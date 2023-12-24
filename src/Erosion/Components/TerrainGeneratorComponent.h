@@ -51,13 +51,13 @@ namespace Erosion
 		unsigned int m_TerrainSize{};
 		unsigned int m_QuadsPerMeter{};
 
-		float m_PerlinMultiplier{ 8.0f };
+		float m_PerlinMultiplier{ 23.726f };
 		int m_SelectedAlgorithmIdx{};
 		unsigned int m_PosX{};
 		unsigned int m_PosY{};
 		bool m_DetailedPerlin{ false };
 		float m_DetailedPerlinMultiplier{ 0.1f };
-		bool m_EnableErosion{ false };
+		bool m_EnableErosion{ true };
 		bool m_EnableDoublePerlin{ false };
 		bool m_UsePerlinPreset{ true };
 
