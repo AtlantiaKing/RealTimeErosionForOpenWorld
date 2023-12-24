@@ -300,17 +300,6 @@ void Erosion::VelocityField::GetHeights(std::vector<float>& heights)
 			}
 		}
 	}
-
-	// After all cycles, apply the sediment that it still stored in water back to the height map
-	for (int x{}; x < terrainSize; ++x)
-	{
-		for (int y{}; y < terrainSize; ++y)
-		{
-			const int cellIdx{ x + y * terrainSize };
-			Cell& cell{ cells[cellIdx] };
-			*cell.height += cell.sediment;
-		}
-	}
 }
 
 void Erosion::VelocityField::OnGUI()
