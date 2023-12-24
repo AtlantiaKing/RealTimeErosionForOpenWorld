@@ -49,28 +49,38 @@ void Erosion::TerrainGeneratorComponent::GenerateNewPerlin()
 	// Create generator
 	m_pGen->SetSize(static_cast<float>(m_TerrainSize));
 
-	that::NoiseMap continentalNess{};
-	continentalNess.GetGraph().AddNode(0.0f, 0.1f);
-	continentalNess.GetGraph().AddNode(0.4f, 0.1f);
-	continentalNess.GetGraph().AddNode(0.7f, 0.8f);
-	continentalNess.GetGraph().AddNode(1.0f, 0.8f);
-	continentalNess.GetPerlin().AddOctave(1.0f, 100.0f * m_PerlinMultiplier);
-	m_pGen->GetHeightMap().AddNoiseMap(continentalNess);
-
-	if (m_DetailedPerlin)
+	// Create a terrain generator
+	if (m_UsePerlinPreset)
 	{
-		that::NoiseMap noise{};
-		noise.GetGraph().AddNode(0.0f, m_DetailedPerlinMultiplier * 0.01f);
-		noise.GetGraph().AddNode(0.5f, m_DetailedPerlinMultiplier * 0.25f);
-		noise.GetGraph().AddNode(1.0f, m_DetailedPerlinMultiplier);
-		noise.GetPerlin().AddOctave(1.0f, 10.0f * m_PerlinMultiplier);
-		noise.GetPerlin().AddOctave(1.0f, 5.0f * m_PerlinMultiplier);
-		noise.GetPerlin().AddOctave(1.0f, 2.0f * m_PerlinMultiplier);
-		m_pGen->GetHeightMap().AddNoiseMap(noise);
+		that::preset::Presets::CreateDefaultTerrain(*m_pGen, seed, m_PerlinMultiplier);
+	}
+	else
+	{
+		that::NoiseMap continentalNess{};
+		continentalNess.GetGraph().AddNode(0.0f, 0.1f);
+		continentalNess.GetGraph().AddNode(0.4f, 0.1f);
+		continentalNess.GetGraph().AddNode(0.6f, 0.7f);
+		continentalNess.GetGraph().AddNode(0.75f, 0.8f);
+		continentalNess.GetGraph().AddNode(0.8f, 0.74f);
+		continentalNess.GetGraph().AddNode(1.0f, 1.0f);
+		continentalNess.GetPerlin().AddOctave(1.0f, 100.0f * m_PerlinMultiplier);
+		m_pGen->GetHeightMap().AddNoiseMap(continentalNess);
+
+		if (m_DetailedPerlin)
+		{
+			that::NoiseMap noise{};
+			noise.GetGraph().AddNode(0.0f, m_DetailedPerlinMultiplier * 0.01f);
+			noise.GetGraph().AddNode(0.5f, m_DetailedPerlinMultiplier * 0.25f);
+			noise.GetGraph().AddNode(1.0f, m_DetailedPerlinMultiplier);
+			noise.GetPerlin().AddOctave(1.0f, 10.0f * m_PerlinMultiplier);
+			noise.GetPerlin().AddOctave(1.0f, 5.0f * m_PerlinMultiplier);
+			noise.GetPerlin().AddOctave(1.0f, 2.0f * m_PerlinMultiplier);
+			m_pGen->GetHeightMap().AddNoiseMap(noise);
+		}
 	}
 
 	// Set the blendmode for the noisemaps
-	m_pGen->GetHeightMap().SetBlendMode(that::HeightMap::BlendMode::Add);
+	m_pGen->GetHeightMap().SetBlendMode(m_UsePerlinPreset ? that::HeightMap::BlendMode::Multiply : that::HeightMap::BlendMode::Add);
 }
 
 void Erosion::TerrainGeneratorComponent::SetNewAlgorithm()
@@ -115,6 +125,10 @@ void Erosion::TerrainGeneratorComponent::OnGUI()
 	ImGui::Spacing();
 
 	// Perlin Customization
+	if (ImGui::Checkbox("Use Library Preset", &m_UsePerlinPreset))
+	{
+		GenerateNewPerlin();
+	}
 	if (ImGui::Checkbox("Enable detailed perlin", &m_DetailedPerlin))
 	{
 		GenerateNewPerlin();

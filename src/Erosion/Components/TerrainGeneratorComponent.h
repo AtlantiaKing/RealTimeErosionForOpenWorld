@@ -59,6 +59,7 @@ namespace Erosion
 		float m_DetailedPerlinMultiplier{ 0.1f };
 		bool m_EnableErosion{ false };
 		bool m_EnableDoublePerlin{ false };
+		bool m_UsePerlinPreset{ true };
 
 		bool m_IsChoosingNewAlgorithm{};
 	};
