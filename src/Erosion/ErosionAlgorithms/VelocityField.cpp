@@ -13,7 +13,6 @@ void Erosion::VelocityField::GetHeights(std::vector<float>& heights)
 	}
 
 	// Erosion radius data
-	constexpr int m_ErosionRadius{ 5 };
 	std::vector<float> radiusWeights{};
 	radiusWeights.resize(m_ErosionRadius * m_ErosionRadius);
 
