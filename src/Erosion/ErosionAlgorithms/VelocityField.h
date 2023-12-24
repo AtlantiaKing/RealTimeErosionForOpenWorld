@@ -31,7 +31,7 @@ namespace Erosion
 		int m_DropletsPerCycle{ 100 };
 		float m_WaterIncrement{ 0.0316f };
 		float m_PipeArea{ 1.0f };
-		float m_Gravity{ 0.1f };
+		float m_Gravity{ -9.81f };
 		float m_PipeLength{ 1.0f };
 		float m_Capacity{ 0.003934f };
 		float m_Erosion{ 0.084f };
