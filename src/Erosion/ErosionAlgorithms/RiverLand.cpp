@@ -208,7 +208,7 @@ void Erosion::RiverLand::OnGUI()
 {
 	ImGui::Spacing();
 	ImGui::Text("River Land Settings");
-	ImGui::SliderFloat("RiverHeight", &m_RiverHeight, 0.0f, 0.5f, "%.5f");
+	ImGui::SliderFloat("RiverHeight", &m_RiverHeight, 0.0f, 1.0f, "%.5f");
 	ImGui::SliderFloat("Height Divider", &m_Divider, 16.0f, 1024.0f);
 	ImGui::SliderInt("Blur Intensity", &m_BlurSize, 1, 15);
 	ImGui::SliderFloat("Cliff Threshold", &m_CliffThreshold, 0.0f, 0.015f, "%.5f");
