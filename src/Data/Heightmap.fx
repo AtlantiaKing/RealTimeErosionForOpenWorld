@@ -7,7 +7,7 @@ float4 gColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
 Texture2D gShadowMap;
 Texture2D gHeightMap;
 
-float gMaxHeight = 100;
+float gMaxHeight = 1000;
 
 struct VS_INPUT {
 	float3 pos : POSITION;
