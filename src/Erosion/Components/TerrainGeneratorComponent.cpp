@@ -12,6 +12,8 @@
 #include "../ErosionAlgorithms/VelocityField.h"
 #include "../ErosionAlgorithms/RiverLand.h"
 
+#include "../Timing/Timer.h"
+
 #include <ImGui/imgui.h>
 
 void Erosion::TerrainGeneratorComponent::Awake()
@@ -186,6 +188,9 @@ void Erosion::TerrainGeneratorComponent::Generate() const
 	auto heights{ m_pTerrain->GetHeights() };
 	const unsigned int terrainSize{ static_cast<unsigned int>(sqrt(heights.size())) };
 
+	Erosion::Timer t{};
+	t.Start();
+
 	// Generate a terrain by perlin noise
 	const that::Generator& generator{ *m_pGen };
 	for (unsigned int x{}; x < terrainSize; ++x)
@@ -204,6 +209,7 @@ void Erosion::TerrainGeneratorComponent::Generate() const
 		m_pErosion->GetHeights(heights);
 	}
 
+	t.End();
 
 	// Apply the new heightmap to the terrain component
 	m_pTerrain->SetHeights(heights);
