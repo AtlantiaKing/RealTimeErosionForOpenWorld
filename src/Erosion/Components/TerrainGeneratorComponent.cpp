@@ -204,30 +204,6 @@ void Erosion::TerrainGeneratorComponent::Generate() const
 		m_pErosion->GetHeights(heights);
 	}
 
-	if (m_EnableDoublePerlin)
-	{
-		// For each cell
-		for (unsigned int x{}; x < terrainSize; ++x)
-		{
-			for (unsigned int z{}; z < terrainSize; ++z)
-			{
-				// Get the height in the current cell
-				float& height{ heights[x + z * terrainSize] };
-
-				// If the cell is water, discard it
-				if (height < FLT_EPSILON) continue;
-
-				// Calculate the perlin offset
-				const float perlin{ m_AfterGen.GetHeight(static_cast<float>(x + m_PosX), static_cast<float>(z + m_PosY)) };
-
-				// Apply an offset at the beaches to avoid creating cliffs
-				const float offset{ height < 0.1f ? height / 0.1f : 1.0f };
-
-				// Add the perlin offset to the heightmap
-				height += perlin * offset;
-			}
-		}
-	}
 
 	// Apply the new heightmap to the terrain component
 	m_pTerrain->SetHeights(heights);
