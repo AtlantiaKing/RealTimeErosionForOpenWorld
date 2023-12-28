@@ -6,6 +6,8 @@
 #include "../../Graphics/Material.h"
 #include "../../Graphics/Texture.h"
 
+#include <Observer.h>
+
 #include <vector>
 #include <unordered_map>
 
@@ -16,7 +18,7 @@ namespace leap
 		class IMeshRenderer;
 	}
 
-	class TerrainComponent final : public Component
+	class TerrainComponent final : public Component, public Observer
 	{
 	public:
 		TerrainComponent();
@@ -27,8 +29,8 @@ namespace leap
 		TerrainComponent& operator=(const TerrainComponent& other) = delete;
 		TerrainComponent& operator=(TerrainComponent&& other) = delete;
 
-		void SetSize(unsigned int size, unsigned int quadsPerMeter = 1);
-		void LoadHeightmap(const std::string& path, bool isShared = false, unsigned int quadsPerMeter = 1);
+		void SetSize(unsigned int size);
+		void LoadHeightmap(const std::string& path, bool isShared = false);
 
 		std::vector<float> GetHeights() const;
 		void SetHeights(const std::vector<float>& heights);
@@ -43,13 +45,13 @@ namespace leap
 		std::unique_ptr<Material> m_pMaterial{};
 
 		virtual void Awake() override;
+		virtual void Notify() override;
 
 		void ApplySizeTexture();
 		void ApplySizeMesh(unsigned int prevSize);
-		void CreateMesh();
+		void CreateMesh(unsigned int size);
 
 		unsigned int m_Size{};
-		unsigned int m_QuadsPerMeter{};
 		graphics::IMeshRenderer* m_pRenderer{};
 		Texture m_Texture{};
 	};
