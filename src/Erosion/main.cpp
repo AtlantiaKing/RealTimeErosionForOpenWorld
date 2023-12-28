@@ -22,7 +22,6 @@
 
 int main()
 {
-	leap::GameContext::GetInstance().AddLogger<leap::ImGuiLogger>();
 	leap::GameContext::GetInstance().AddLogger<leap::ConsoleLogger>();
 
 	leap::LeapEngine engine{ 1280, 720, "Example" };
