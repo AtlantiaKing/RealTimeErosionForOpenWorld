@@ -10,8 +10,6 @@ void Erosion::TerrainManager::AddTerrain(int x, int y, const TerrainGeneratorCom
 	const int chunkX{ x / 256 };
 	const int chunkY{ y / 256 };
 
-	m_Mutex.lock();
-
 	// Add the new chunk to the vector
 	m_Chunks.emplace_back(chunkX, chunkY, pTerrain, std::move(heights));
 	auto& chunk{ m_Chunks[m_Chunks.size() - 1] };
@@ -21,8 +19,11 @@ void Erosion::TerrainManager::AddTerrain(int x, int y, const TerrainGeneratorCom
 	EvaluateChunk(chunk, chunkX + 1, chunkY, EvaluateDirection::Right);
 	EvaluateChunk(chunk, chunkX, chunkY - 1, EvaluateDirection::Back);
 	EvaluateChunk(chunk, chunkX, chunkY + 1, EvaluateDirection::Forward);
+}
 
-	m_Mutex.unlock();
+void Erosion::TerrainManager::RemoveTerrain(int x, int y)
+{
+	std::erase_if(m_Chunks, [=](const auto& chunk) { return chunk.x == x && chunk.y == y; });
 }
 
 void Erosion::TerrainManager::EvaluateChunk(Chunk& cur, int evalX, int evalY, EvaluateDirection dir)

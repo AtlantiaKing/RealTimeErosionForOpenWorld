@@ -14,6 +14,22 @@ void Erosion::RealtimeGenerator::SetPlayerTransform(leap::Transform* pPlayer)
 	m_pPlayer = pPlayer;
 }
 
+void Erosion::RealtimeGenerator::Awake()
+{
+	const int width{ m_Range * 2 + 1 };
+	const int worldSize{ width * width };
+	m_Chunks.reserve(worldSize);
+	m_Pool.resize(worldSize);
+
+	for (int i{}; i < worldSize; ++i)
+	{
+		const auto pTerrain{ leap::SceneManager::GetInstance().GetActiveScene()->CreateGameObject("Terrain") };
+		pTerrain->AddComponent<leap::TerrainComponent>()->SetSize(256);
+
+		m_Pool[i] = pTerrain->AddComponent<Erosion::TerrainGeneratorComponent>();
+	}
+}
+
 void Erosion::RealtimeGenerator::Update()
 {
 	if (m_CurTime < m_TimePerChunk)
@@ -29,23 +45,33 @@ void Erosion::RealtimeGenerator::Update()
 	const int x{ static_cast<int>(playerPos.x / 256) };
 	const int z{ static_cast<int>(playerPos.z / 256) };
 
-	constexpr int range{ 7 };
-	for (int xPos{ x - range }; xPos <= x + range; ++xPos)
+	if (m_PrevX == x && m_PrevZ == z) return;
+
+	for (int i{ static_cast<int>(m_Chunks.size()) - 1 }; i >= 0; --i)
 	{
-		for (int zPos{ z - range }; zPos <= z + range; ++zPos)
+		const auto& chunk{ m_Chunks[i] };
+		if (chunk.x >= x - m_Range && chunk.x <= x + m_Range && chunk.y >= z - m_Range && chunk.y <= z + m_Range) continue;
+
+		m_Pool.push_back(chunk.pTerrain);
+		m_Chunks.erase(begin(m_Chunks) + i);
+	}
+
+	for (int xPos{ x - m_Range }; xPos <= x + m_Range; ++xPos)
+	{
+		for (int zPos{ z - m_Range }; zPos <= z + m_Range; ++zPos)
 		{
-			const auto it{ std::find_if(begin(m_DiscoveredChunks), end(m_DiscoveredChunks), [=](const auto& chunk) { return chunk.first == xPos && chunk.second == zPos; }) };
+			const auto it{ std::find_if(begin(m_Chunks), end(m_Chunks), [=](const auto& chunk) { return chunk.x == xPos && chunk.y == zPos; }) };
 
-			if (it != end(m_DiscoveredChunks)) continue;
+			if (it != end(m_Chunks)) continue;
 
-			m_DiscoveredChunks.push_back(std::pair{ xPos,zPos });
-
-			const auto pTerrain{ leap::SceneManager::GetInstance().GetActiveScene()->CreateGameObject("Terrain") };
-			pTerrain->AddComponent<leap::TerrainComponent>()->SetSize(256, 1);
-			pTerrain->GetTransform()->Translate(static_cast<float>(xPos * 256), 0.0f, static_cast<float>(zPos * 256));
-			pTerrain->AddComponent<Erosion::TerrainGeneratorComponent>()->GenerateAt(xPos * 256, zPos * 256);
-
-			return;
+			auto pTerrain{ m_Pool[0] };
+			m_Pool.erase(begin(m_Pool));
+			pTerrain->GetTransform()->SetLocalPosition(static_cast<float>(xPos * 256), 0.0f, static_cast<float>(zPos * 256));
+			pTerrain->GenerateAt(xPos * 256, zPos * 256);
+			m_Chunks.emplace_back(xPos, zPos, pTerrain);
 		}
 	}
+
+	m_PrevX = x;
+	m_PrevZ = z;
 }

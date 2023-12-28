@@ -23,8 +23,8 @@ void Erosion::SampleScene::Load(leap::Scene& scene)
 	const auto pCamera{ scene.CreateGameObject("Main camera") };
 	const auto pCameraComponent{ pCamera->AddComponent<leap::CameraComponent>() };
 	pCameraComponent->SetAsActiveCamera(true);
-	pCameraComponent->GetData()->SetFarPlane(1600.0f);
-	pCamera->GetTransform()->SetWorldPosition(1152, 1000, 1152);
+	pCameraComponent->GetData()->SetFarPlane(2000.0f);
+	pCamera->GetTransform()->SetWorldPosition(0, 60.0f, 0);
 	pCamera->GetTransform()->SetLocalRotation(90.0f, 0.0f, 0.0f);
 	pCamera->AddComponent<Erosion::FreeCamMovement>();
 
@@ -42,6 +42,6 @@ void Erosion::SampleScene::Load(leap::Scene& scene)
 	pPlaneRenderer->SetMesh(planeMesh);
 	pPlaneRenderer->SetMaterial(planeMat);
 	pPlane->AddComponent<PlaneFollow>()->SetPlayer(pCamera->GetTransform());
-	pPlane->GetTransform()->Scale(5000.0f); 
+	pPlane->GetTransform()->Scale(1); 
 	pPlane->GetTransform()->SetWorldPosition(0, 50.0f, 0);
 }

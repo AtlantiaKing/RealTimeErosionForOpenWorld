@@ -20,9 +20,10 @@
 
 void Erosion::TerrainGeneratorComponent::GenerateAt(unsigned int x, unsigned int y)
 {
+	TerrainManager::GetInstance().RemoveTerrain(m_PosX, m_PosY);
 	m_PosX = x;
 	m_PosY = y;
-	m_AutomaticGeneration = true;
+	Generate();
 }
 
 void Erosion::TerrainGeneratorComponent::Awake()
@@ -213,7 +214,7 @@ void Erosion::TerrainGeneratorComponent::OnGUI()
 void Erosion::TerrainGeneratorComponent::Generate()
 {
 	// Get the size and height data from the terrain component
-	m_Heights = m_pTerrain->GetHeights();
+	if(m_Heights.empty()) m_Heights = m_pTerrain->GetHeights();
 
 	std::jthread thread
 	{ 

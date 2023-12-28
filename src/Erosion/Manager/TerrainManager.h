@@ -2,7 +2,6 @@
 
 #include <Singleton.h>
 #include <vector>
-#include <mutex>
 
 namespace Erosion
 {
@@ -19,6 +18,7 @@ namespace Erosion
 		TerrainManager& operator=(TerrainManager&& other) = delete;
 
 		void AddTerrain(int x, int y, const TerrainGeneratorComponent* pTerrain, std::vector<float> heights);
+		void RemoveTerrain(int x, int y);
 
 	private:
 		TerrainManager() = default;
@@ -42,6 +42,5 @@ namespace Erosion
 		void EvaluateChunk(Chunk& cur, int evalX, int evalY, EvaluateDirection dir);
 
 		std::vector<Chunk> m_Chunks{};
-		std::mutex m_Mutex{};
 	};
 }

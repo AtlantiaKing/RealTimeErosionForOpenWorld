@@ -6,7 +6,6 @@
 #include "../ErosionAlgorithms/ITerrainGenerator.h"
 
 #include <memory>
-#include <mutex>
 
 namespace leap
 {
@@ -71,7 +70,5 @@ namespace Erosion
 		bool m_AutomaticGeneration{};
 
 		bool m_AsyncDone{};
-
-		std::mutex m_Mutex{};
 	};
 }
