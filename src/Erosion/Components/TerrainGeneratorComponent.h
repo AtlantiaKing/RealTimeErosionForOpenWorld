@@ -6,6 +6,7 @@
 #include "../ErosionAlgorithms/ITerrainGenerator.h"
 
 #include <memory>
+#include <mutex>
 
 namespace leap
 {
@@ -25,6 +26,8 @@ namespace Erosion
 		TerrainGeneratorComponent(const TerrainGeneratorComponent& other) = delete;
 		TerrainGeneratorComponent(TerrainGeneratorComponent&& other) = delete;
 
+		void GenerateAt(unsigned int x, unsigned int y);
+
 	private:
 		enum class ErosionAlgorithm
 		{
@@ -36,18 +39,21 @@ namespace Erosion
 		inline const static char* m_ErosionAlgorithmStr[m_NrAlgorithms] { "Hans Beyer", "Velocity Field", "River Land" };
 
 		virtual void Awake() override;
+		virtual void Update() override;
 		virtual void OnGUI() override;
 
 		void GenerateNewPerlin();
 		void SetNewAlgorithm();
-		void Generate() const;
+		void Generate();
 
 		leap::TerrainComponent* m_pTerrain{};
 		std::unique_ptr<that::Generator> m_pGen{};
 		that::Generator m_AfterGen{};
 		std::unique_ptr<ITerrainGenerator> m_pErosion{};
 
-		unsigned int seed{};
+		std::vector<float> m_Heights{};
+
+		inline static unsigned int seed{};
 		unsigned int m_TerrainSize{};
 		unsigned int m_QuadsPerMeter{};
 
@@ -62,5 +68,10 @@ namespace Erosion
 		bool m_UsePerlinPreset{ true };
 
 		bool m_IsChoosingNewAlgorithm{};
+		bool m_AutomaticGeneration{};
+
+		bool m_AsyncDone{};
+
+		std::mutex m_Mutex{};
 	};
 }

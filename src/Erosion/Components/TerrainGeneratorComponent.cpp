@@ -14,10 +14,22 @@
 
 #include "../Timing/Timer.h"
 
-#include <ImGui/imgui.h>
+#include "../Manager/TerrainManager.h"
+
+#include <thread>
+
+void Erosion::TerrainGeneratorComponent::GenerateAt(unsigned int x, unsigned int y)
+{
+	m_PosX = x;
+	m_PosY = y;
+	m_AutomaticGeneration = true;
+}
 
 void Erosion::TerrainGeneratorComponent::Awake()
 {
+	// Generate a seed for all the terrain generators
+	if (seed == 0) seed = static_cast<int>(time(nullptr));
+
 	// Create main perlin map
 	GenerateNewPerlin();
 
@@ -39,6 +51,20 @@ void Erosion::TerrainGeneratorComponent::Awake()
 	m_AfterGen.GetHeightMap().AddNoiseMap(doublePerlin);
 
 	m_AfterGen.SetSize(static_cast<float>(m_TerrainSize));
+
+	if (m_AutomaticGeneration) Generate();
+}
+
+void Erosion::TerrainGeneratorComponent::Update()
+{
+	// If async is already handled or still running, don't do anything
+	if (!m_AsyncDone) return;
+
+	// Reset the async state
+	m_AsyncDone = false;
+
+	// Add this terrain to the manager and fix edges
+	TerrainManager::GetInstance().AddTerrain(m_PosX, m_PosY, this, m_Heights);
 }
 
 void Erosion::TerrainGeneratorComponent::GenerateNewPerlin()
@@ -109,108 +135,113 @@ void Erosion::TerrainGeneratorComponent::SetNewAlgorithm()
 
 void Erosion::TerrainGeneratorComponent::OnGUI()
 {
-	ImGui::Begin("Terrain Generator");
+	//std::stringstream ss{};
+	//ss << "Terrain Generator " << this;
+	//ImGui::Begin(ss.str().c_str());
 
-	// Regenerate button
-	if (ImGui::Button("Generate")) Generate();
+	//// Regenerate button
+	//if (ImGui::Button("Generate")) Generate();
 
-	ImGui::Spacing();
+	//ImGui::Spacing();
 
-	// Terrain Component Customization
-	ImGui::DragScalar("Terrain Size", ImGuiDataType_::ImGuiDataType_U32, &m_TerrainSize);
-	ImGui::InputScalar("Quads Per Meter", ImGuiDataType_::ImGuiDataType_U32, &m_QuadsPerMeter);
-	if (ImGui::Button("Create new terrain"))
-	{
-		m_pTerrain->SetSize(m_TerrainSize, m_QuadsPerMeter);
-	}
+	//// Terrain Component Customization
+	//ImGui::DragScalar("Terrain Size", ImGuiDataType_::ImGuiDataType_U32, &m_TerrainSize);
+	//ImGui::InputScalar("Quads Per Meter", ImGuiDataType_::ImGuiDataType_U32, &m_QuadsPerMeter);
+	//if (ImGui::Button("Create new terrain"))
+	//{
+	//	m_pTerrain->SetSize(m_TerrainSize, m_QuadsPerMeter);
+	//}
 
-	ImGui::Spacing();
+	//ImGui::Spacing();
 
-	// Perlin Customization
-	if (ImGui::Checkbox("Use Library Preset", &m_UsePerlinPreset))
-	{
-		GenerateNewPerlin();
-	}
-	if (ImGui::Checkbox("Enable detailed perlin", &m_DetailedPerlin))
-	{
-		GenerateNewPerlin();
-	}
-	if (ImGui::SliderFloat("Detailed perlin multiplier", &m_DetailedPerlinMultiplier, 0.0f, 1.0f, "%.5f"))
-	{
-		GenerateNewPerlin();
-	}
-	if (ImGui::SliderFloat("Perlin Size", &m_PerlinMultiplier, 0.01f, 100.0f))
-	{
-		GenerateNewPerlin();
-	}
-	if (ImGui::Button("New seed"))
-	{
-		seed = static_cast<unsigned int>(time(nullptr));
-		GenerateNewPerlin();
-	}
+	//// Perlin Customization
+	//if (ImGui::Checkbox("Use Library Preset", &m_UsePerlinPreset))
+	//{
+	//	GenerateNewPerlin();
+	//}
+	//if (ImGui::Checkbox("Enable detailed perlin", &m_DetailedPerlin))
+	//{
+	//	GenerateNewPerlin();
+	//}
+	//if (ImGui::SliderFloat("Detailed perlin multiplier", &m_DetailedPerlinMultiplier, 0.0f, 1.0f, "%.5f"))
+	//{
+	//	GenerateNewPerlin();
+	//}
+	//if (ImGui::SliderFloat("Perlin Size", &m_PerlinMultiplier, 0.01f, 100.0f))
+	//{
+	//	GenerateNewPerlin();
+	//}
+	//if (ImGui::Button("New seed"))
+	//{
+	//	seed = static_cast<unsigned int>(time(nullptr));
+	//	GenerateNewPerlin();
+	//}
 
-	ImGui::Spacing();
+	//ImGui::Spacing();
 
-	// Erosion algorithm drop down menu
-	if (m_IsChoosingNewAlgorithm)
-	{
-		if (ImGui::ListBox("Erosion Algorithm", &m_SelectedAlgorithmIdx, m_ErosionAlgorithmStr, m_NrAlgorithms))
-		{
-			SetNewAlgorithm();
-			m_IsChoosingNewAlgorithm = false;
-		}
-	}
-	else
-	{
-		if(ImGui::Button(m_ErosionAlgorithmStr[m_SelectedAlgorithmIdx]))
-		{
-			m_IsChoosingNewAlgorithm = true;
-		}
-	}
+	//// Erosion algorithm drop down menu
+	//if (m_IsChoosingNewAlgorithm)
+	//{
+	//	if (ImGui::ListBox("Erosion Algorithm", &m_SelectedAlgorithmIdx, m_ErosionAlgorithmStr, m_NrAlgorithms))
+	//	{
+	//		SetNewAlgorithm();
+	//		m_IsChoosingNewAlgorithm = false;
+	//	}
+	//}
+	//else
+	//{
+	//	if(ImGui::Button(m_ErosionAlgorithmStr[m_SelectedAlgorithmIdx]))
+	//	{
+	//		m_IsChoosingNewAlgorithm = true;
+	//	}
+	//}
 
-	ImGui::Spacing();
+	//ImGui::Spacing();
 
-	// Global erosion customization
-	ImGui::Checkbox("Enable Erosion", &m_EnableErosion);
-	ImGui::Checkbox("Enable Double Perlin", &m_EnableDoublePerlin);
-	ImGui::DragScalar("Pos X", ImGuiDataType_::ImGuiDataType_U32, &m_PosX);
-	ImGui::DragScalar("Pos Y", ImGuiDataType_::ImGuiDataType_U32, &m_PosY);
+	//// Global erosion customization
+	//ImGui::Checkbox("Enable Erosion", &m_EnableErosion);
+	//ImGui::Checkbox("Enable Double Perlin", &m_EnableDoublePerlin);
+	//ImGui::DragScalar("Pos X", ImGuiDataType_::ImGuiDataType_U32, &m_PosX);
+	//ImGui::DragScalar("Pos Y", ImGuiDataType_::ImGuiDataType_U32, &m_PosY);
 
-	// Implementation specific customization
-	m_pErosion->OnGUI();
+	//// Implementation specific customization
+	//m_pErosion->OnGUI();
 
-	ImGui::End();
+	//ImGui::End();
 }
 
-void Erosion::TerrainGeneratorComponent::Generate() const
+void Erosion::TerrainGeneratorComponent::Generate()
 {
 	// Get the size and height data from the terrain component
-	auto heights{ m_pTerrain->GetHeights() };
-	const unsigned int terrainSize{ static_cast<unsigned int>(sqrt(heights.size())) };
+	m_Heights = m_pTerrain->GetHeights();
 
-	Erosion::Timer t{};
-	t.Start();
-
-	// Generate a terrain by perlin noise
-	const that::Generator& generator{ *m_pGen };
-	for (unsigned int x{}; x < terrainSize; ++x)
-	{
-		for (unsigned int z{}; z < terrainSize; ++z)
+	std::jthread thread
+	{ 
+		[this]() 
 		{
-			float noiseValue{ generator.GetHeight(static_cast<float>(x + m_PosX), static_cast<float>(z + m_PosY)) };
+			const unsigned int terrainSize{ static_cast<unsigned int>(sqrt(m_Heights.size())) };
 
-			heights[x + z * terrainSize] = noiseValue;
+			// Generate a terrain by perlin noise
+			const that::Generator& generator{ *m_pGen };
+			for (unsigned int x{}; x < terrainSize; ++x)
+			{
+				for (unsigned int z{}; z < terrainSize; ++z)
+				{
+					float noiseValue{ generator.GetHeight(static_cast<float>(x + m_PosX), static_cast<float>(z + m_PosY)) };
+
+					m_Heights[x + z * terrainSize] = noiseValue;
+				}
+			}
+
+			// Apply a erosion algorithm
+			if (m_EnableErosion)
+			{
+				m_pErosion->GetHeights(m_Heights);
+			}
+
+			// Set the async state so it can be handled by the main thread
+			m_AsyncDone = true;
 		}
-	}
-
-	// Apply a erosion algorithm
-	if (m_EnableErosion)
-	{
-		m_pErosion->GetHeights(heights);
-	}
-
-	t.End();
-
-	// Apply the new heightmap to the terrain component
-	m_pTerrain->SetHeights(heights);
+	};
+	thread.detach();
 }

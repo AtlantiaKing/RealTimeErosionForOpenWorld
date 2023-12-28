@@ -13,7 +13,7 @@ endif()
 # Create executable
 add_executable(Erosion ${WIN32_EXECUTABLE}
 	"main.cpp"
-	"Scenes/Sample.cpp" "Components/FreeCamMovement.cpp" "Components/TerrainGeneratorComponent.cpp" "ErosionAlgorithms/HansBeyer.cpp" "ErosionAlgorithms/VelocityField.cpp" "ErosionAlgorithms/RiverLand.cpp")
+	"Scenes/Sample.cpp" "Components/FreeCamMovement.cpp" "Components/TerrainGeneratorComponent.cpp" "ErosionAlgorithms/HansBeyer.cpp" "ErosionAlgorithms/VelocityField.cpp" "ErosionAlgorithms/RiverLand.cpp" "Components/RealtimeGenerator.cpp" "Manager/TerrainManager.cpp" "Components/PlaneFollow.cpp")
 
 # Link Engine libs
 target_include_directories(Erosion PRIVATE ${LEAP_INCLUDE} ${LEAP_AUDIO_INCLUDE} ${LEAP_GRAPHICS_INCLUDE} ${LEAP_INPUT_INCLUDE} ${LEAP_NETWORK_INCLUDE} ${LEAP_PHYSICS_INCLUDE} ${LEAP_UTILS_INCLUDE})
