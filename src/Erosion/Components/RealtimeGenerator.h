@@ -5,10 +5,13 @@
 #include <vector>
 #include <utility>
 
+namespace leap
+{
+	class TerrainComponent;
+}
+
 namespace Erosion
 {
-	class TerrainGeneratorComponent;
-
 	class RealtimeGenerator final : public leap::Component
 	{
 	public:
@@ -26,7 +29,7 @@ namespace Erosion
 		{
 			int x{};
 			int y{};
-			TerrainGeneratorComponent* pTerrain{};
+			leap::TerrainComponent* pTerrain{};
 		};
 
 		void Awake() override;
@@ -36,14 +39,14 @@ namespace Erosion
 
 		std::vector<std::pair<int,int>> m_DiscoveredChunks{};
 		std::vector<Chunk> m_Chunks{};
-		std::vector<TerrainGeneratorComponent*> m_Pool{};
+		std::vector<leap::TerrainComponent*> m_Pool{};
 
 		int m_Range{ 5 };
 
 		float m_TimePerChunk{ 0.01f };
 		float m_CurTime{};
 
-		int m_PrevX{};
-		int m_PrevZ{};
+		int m_PrevX{ -1 };
+		int m_PrevZ{ -1 };
 	};
 }

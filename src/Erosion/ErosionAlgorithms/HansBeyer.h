@@ -9,7 +9,8 @@ namespace Erosion
 	public:
 		virtual ~HansBeyer() = default;
 
-		virtual void GetHeights(std::vector<float>& heights) override;
+		virtual void SetChunk(int x, int y) override { m_ChunkX = x; m_ChunkY = y; }
+		virtual void GetHeights(Heightmap& heights) override;
 		inline static float Random01() { return static_cast<float>(rand()) / RAND_MAX; }
 
 		virtual void OnGUI() override;
@@ -30,5 +31,9 @@ namespace Erosion
 		float m_Evaporation{ 0.0125f };
 		float m_Deposition{ 0.095f };
 		float m_Erosion{ 0.633f };
+
+		// Chunk data
+		int m_ChunkX{};
+		int m_ChunkY{};
 	};
 }

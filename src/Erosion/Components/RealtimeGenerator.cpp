@@ -8,6 +8,7 @@
 
 #include <GameContext/GameContext.h>
 #include <GameContext/Timer.h>
+#include "../Manager/TerrainManager.h"
 
 void Erosion::RealtimeGenerator::SetPlayerTransform(leap::Transform* pPlayer)
 {
@@ -24,9 +25,10 @@ void Erosion::RealtimeGenerator::Awake()
 	for (int i{}; i < worldSize; ++i)
 	{
 		const auto pTerrain{ leap::SceneManager::GetInstance().GetActiveScene()->CreateGameObject("Terrain") };
-		pTerrain->AddComponent<leap::TerrainComponent>()->SetSize(256);
+		auto pTerrainComponent{ pTerrain->AddComponent<leap::TerrainComponent>() };
+		pTerrainComponent->SetSize(256);
 
-		m_Pool[i] = pTerrain->AddComponent<Erosion::TerrainGeneratorComponent>();
+		m_Pool[i] = pTerrainComponent;
 	}
 }
 
@@ -67,7 +69,7 @@ void Erosion::RealtimeGenerator::Update()
 			auto pTerrain{ m_Pool[0] };
 			m_Pool.erase(begin(m_Pool));
 			pTerrain->GetTransform()->SetLocalPosition(static_cast<float>(xPos * 256), 0.0f, static_cast<float>(zPos * 256));
-			pTerrain->GenerateAt(xPos * 256, zPos * 256);
+			TerrainManager::GetInstance().Generate(xPos, zPos, pTerrain);
 			m_Chunks.emplace_back(xPos, zPos, pTerrain);
 		}
 	}
