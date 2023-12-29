@@ -17,49 +17,44 @@ Erosion::TerrainManager::TerrainManager()
 	that::preset::Presets::CreateDefaultTerrain(m_Perlin, static_cast<unsigned int>(time(nullptr)), m_PerlinMultiplier);
 	m_Perlin.GetHeightMap().SetBlendMode(that::HeightMap::BlendMode::Multiply);
 
-
-	const int nrThreads{ 5 };
-	for (int i{}; i < nrThreads; ++i)
+	m_Thread = std::jthread
 	{
-		m_Threads.push_back(std::jthread
+		[this]()
 		{
-			[this]()
+			std::unique_ptr<ITerrainGenerator> pErosion = std::make_unique<HansBeyer>();
+			while (true)
 			{
-				std::unique_ptr<ITerrainGenerator> pErosion = std::make_unique<HansBeyer>();
-				while (true)
+				if (!m_Running) return;
+
+				m_QueueMutex.lock();
+				if (m_ChunkQueue.empty())
 				{
-					if (!m_Running) return;
-
-					m_QueueMutex.lock();
-					if (m_ChunkQueue.empty())
-					{
-						m_QueueMutex.unlock();
-						continue;
-					}
-					Chunk chunk{ m_ChunkQueue.front() };
-					m_ChunkQueue.pop();
 					m_QueueMutex.unlock();
-
-					EvaluateChunkPadding(chunk.x, chunk.y);
-
-					GeneratePerlin(chunk.x, chunk.y);
-
-					Erode(chunk.x, chunk.y, pErosion);
-
-					std::vector<float> chunkData(m_ChunkSize * m_ChunkSize);
-					const int paddingSize{ m_ChunkSize / 2 };
-					for (int x{}; x < m_ChunkSize; ++x)
-					{
-						for (int y{}; y < m_ChunkSize; ++y)
-						{
-							chunkData[x + y * m_ChunkSize] = m_Heightmap.GetHeight(paddingSize + chunk.x * (m_ChunkSize - 1) + x, paddingSize + chunk.y * (m_ChunkSize - 1) + y);
-						}
-					}
-					chunk.pTerrain->SetHeights(chunkData);
+					continue;
 				}
+				Chunk chunk{ m_ChunkQueue.front() };
+				m_ChunkQueue.pop();
+				m_QueueMutex.unlock();
+
+				EvaluateChunkPadding(chunk.x, chunk.y);
+
+				GeneratePerlin(chunk.x, chunk.y);
+
+				Erode(chunk.x, chunk.y, pErosion);
+
+				std::vector<float> chunkData(m_ChunkSize * m_ChunkSize);
+				const int paddingSize{ m_ChunkSize / 2 };
+				for (int x{}; x < m_ChunkSize; ++x)
+				{
+					for (int y{}; y < m_ChunkSize; ++y)
+					{
+						chunkData[x + y * m_ChunkSize] = m_Heightmap.GetHeight(paddingSize + chunk.x * (m_ChunkSize - 1) + x, paddingSize + chunk.y * (m_ChunkSize - 1) + y);
+					}
+				}
+				chunk.pTerrain->SetHeights(chunkData);
 			}
-		});
-	}
+		}
+	};
 }
 
 Erosion::TerrainManager::~TerrainManager()

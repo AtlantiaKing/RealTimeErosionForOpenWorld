@@ -42,6 +42,6 @@ void Erosion::SampleScene::Load(leap::Scene& scene)
 	pPlaneRenderer->SetMesh(planeMesh);
 	pPlaneRenderer->SetMaterial(planeMat);
 	pPlane->AddComponent<PlaneFollow>()->SetPlayer(pCamera->GetTransform());
-	pPlane->GetTransform()->Scale(1); 
+	pPlane->GetTransform()->Scale(10'000); 
 	pPlane->GetTransform()->SetWorldPosition(0, 50.0f, 0);
 }

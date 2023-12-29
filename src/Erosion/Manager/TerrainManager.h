@@ -60,6 +60,6 @@ namespace Erosion
 
 		bool m_Running{ true };
 
-		std::vector<std::jthread> m_Threads{};
+		std::jthread m_Thread{};
 	};
 }

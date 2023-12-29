@@ -2,7 +2,6 @@
 
 #include <map>
 #include <vector>
-#include <mutex>
 
 namespace Erosion
 {
@@ -18,8 +17,6 @@ namespace Erosion
 			const int xInChunk{ x % m_ChunkSize };
 			const int yInChunk{ y % m_ChunkSize };
 
-			std::lock_guard lock{ m_Mutex };
-
 			auto& rowOfChunks{ m_HeightmapPerChunk[chunkX] };
 			auto& chunk{ rowOfChunks[chunkY] };
 
@@ -31,8 +28,6 @@ namespace Erosion
 		int GetSize() const { return m_ChunkSize; }
 
 	private:
-		std::mutex m_Mutex{};
-
 		int m_ChunkSize{};
 		std::map<int, std::map<int, std::vector<float>>> m_HeightmapPerChunk{};
 	};
