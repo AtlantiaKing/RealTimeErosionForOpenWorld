@@ -34,6 +34,7 @@ namespace Erosion
 
 		void Generate(int x, int y, leap::TerrainComponent* pTerrain, bool eroded);
 		void Unregister(int x, int y);
+		void Update();
 		Heightmap& GetHeightmap() { return m_Heightmap; }
 
 	private:
@@ -56,9 +57,12 @@ namespace Erosion
 		Heightmap m_Heightmap{ m_ChunkSize };
 		int m_HeightmapSize{};
 		std::map<int, std::set<int>> m_ErodedChunks{};
-		std::map<int, std::map<int, leap::TerrainComponent*>> m_ActiveChunks{};
+		std::map<int, std::map<int, std::pair<leap::TerrainComponent*, bool>>> m_ActiveChunks{};
+		std::vector<Chunk> m_ChangedChunks{};
 
 		bool m_Running{ true };
+		bool m_Reload{};
+		bool m_MainThreadBusy{};
 
 		std::jthread m_Thread{};
 	};
