@@ -24,28 +24,28 @@ void Erosion::FreeCamMovement::Start()
 	// Link keyboard input
 	auto command = std::make_unique<leap::LambdaCommand>([&]()
 		{
-			GetGameObject()->GetParent()->GetTransform()->Translate(-GetTransform()->GetRight() * (m_Sprinting ? 100.0f : 1.0f) * leap::GameContext::GetInstance().GetTimer()->GetDeltaTime());
+			GetGameObject()->GetParent()->GetTransform()->Translate(-GetTransform()->GetRight() * (m_Sprinting ? 100.0f : 4.0f) * leap::GameContext::GetInstance().GetTimer()->GetDeltaTime());
 		});
 	keyboard->AddCommand(command.get(), leap::input::InputManager::InputType::EventRepeat, leap::input::Keyboard::Key::KeyA);
 	m_Commands.push_back(std::move(command));
 
 	command = std::make_unique<leap::LambdaCommand>([&]()
 		{
-			GetGameObject()->GetParent()->GetTransform()->Translate(GetTransform()->GetRight() * (m_Sprinting ? 100.0f : 1.0f) * leap::GameContext::GetInstance().GetTimer()->GetDeltaTime());
+			GetGameObject()->GetParent()->GetTransform()->Translate(GetTransform()->GetRight() * (m_Sprinting ? 100.0f : 4.0f) * leap::GameContext::GetInstance().GetTimer()->GetDeltaTime());
 		});
 	keyboard->AddCommand(command.get(), leap::input::InputManager::InputType::EventRepeat, leap::input::Keyboard::Key::KeyD);
 	m_Commands.push_back(std::move(command));
 
 	command = std::make_unique<leap::LambdaCommand>([&]()
 		{
-			GetGameObject()->GetParent()->GetTransform()->Translate(GetTransform()->GetForward() * (m_Sprinting ? 100.0f : 1.0f) * leap::GameContext::GetInstance().GetTimer()->GetDeltaTime());
+			GetGameObject()->GetParent()->GetTransform()->Translate(GetTransform()->GetForward() * (m_Sprinting ? 100.0f : 4.0f) * leap::GameContext::GetInstance().GetTimer()->GetDeltaTime());
 		});
 	keyboard->AddCommand(command.get(), leap::input::InputManager::InputType::EventRepeat, leap::input::Keyboard::Key::KeyW);
 	m_Commands.push_back(std::move(command));
 
 	command = std::make_unique<leap::LambdaCommand>([&]()
 		{
-			GetGameObject()->GetParent()->GetTransform()->Translate(-GetTransform()->GetForward() * (m_Sprinting ? 100.0f : 1.0f) * leap::GameContext::GetInstance().GetTimer()->GetDeltaTime());
+			GetGameObject()->GetParent()->GetTransform()->Translate(-GetTransform()->GetForward() * (m_Sprinting ? 100.0f : 4.0f) * leap::GameContext::GetInstance().GetTimer()->GetDeltaTime());
 		});
 	keyboard->AddCommand(command.get(), leap::input::InputManager::InputType::EventRepeat, leap::input::Keyboard::Key::KeyS);
 	m_Commands.push_back(std::move(command));
@@ -62,6 +62,13 @@ void Erosion::FreeCamMovement::Start()
 			m_Sprinting = false;
 		});
 	keyboard->AddCommand(command.get(), leap::input::InputManager::InputType::EventRelease, leap::input::Keyboard::Key::KeyLeftShift);
+	m_Commands.push_back(std::move(command));
+
+	command = std::make_unique<leap::LambdaCommand>([&]()
+		{
+			GetGameObject()->GetParent()->GetTransform()->Translate(0.0f, 2.0f, 0.0f);
+		});
+	keyboard->AddCommand(command.get(), leap::input::InputManager::InputType::EventPress, leap::input::Keyboard::Key::KeyLeftControl);
 	m_Commands.push_back(std::move(command));
 
 	// Link mouse input
