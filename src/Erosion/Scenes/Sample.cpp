@@ -24,7 +24,7 @@ void Erosion::SampleScene::Load(leap::Scene& scene)
 	const auto pCameraComponent{ pCamera->AddComponent<leap::CameraComponent>() };
 	pCameraComponent->SetAsActiveCamera(true);
 	pCameraComponent->GetData()->SetFarPlane(2000.0f);
-	pCamera->GetTransform()->SetWorldPosition(128, 60.0f, 128);
+	pCamera->GetTransform()->SetWorldPosition(10'000.0f, 60.0f, 10'000.0f);
 	pCamera->GetTransform()->SetLocalRotation(0.0f, 0.0f, 0.0f);
 	pCamera->AddComponent<Erosion::FreeCamMovement>();
 

@@ -64,12 +64,17 @@ void Erosion::RealtimeGenerator::Update()
 		{
 			const auto it{ std::find_if(begin(m_Chunks), end(m_Chunks), [=](const auto& chunk) { return chunk.x == xPos && chunk.y == zPos; }) };
 
-			if (it != end(m_Chunks)) continue;
+			if (it != end(m_Chunks))
+			{
+				TerrainManager::GetInstance().Generate(xPos, zPos, it->pTerrain, abs(xPos - x) < m_Range / 2 && abs(zPos - z) < m_Range / 2);
+				continue;
+			}
 
 			auto pTerrain{ m_Pool[0] };
 			m_Pool.erase(begin(m_Pool));
 			pTerrain->GetTransform()->SetLocalPosition(static_cast<float>(xPos * 256), 0.0f, static_cast<float>(zPos * 256));
-			TerrainManager::GetInstance().Generate(xPos, zPos, pTerrain);
+			TerrainManager::GetInstance().Unregister(xPos, zPos);
+			TerrainManager::GetInstance().Generate(xPos, zPos, pTerrain, abs(xPos - x) < m_Range / 2 && abs(zPos - z) < m_Range / 2);
 			m_Chunks.emplace_back(xPos, zPos, pTerrain);
 		}
 	}

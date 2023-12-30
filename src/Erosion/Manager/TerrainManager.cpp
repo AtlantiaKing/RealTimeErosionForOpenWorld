@@ -12,11 +12,6 @@
 
 Erosion::TerrainManager::TerrainManager()
 {
-	// Create generator
-	m_Perlin.SetSize(static_cast<float>(m_ChunkSize));
-	that::preset::Presets::CreateDefaultTerrain(m_Perlin, static_cast<unsigned int>(time(nullptr)), m_PerlinMultiplier);
-	m_Perlin.GetHeightMap().SetBlendMode(that::HeightMap::BlendMode::Multiply);
-
 	m_Thread = std::jthread
 	{
 		[this]()
@@ -36,11 +31,11 @@ Erosion::TerrainManager::TerrainManager()
 				m_ChunkQueue.pop();
 				m_QueueMutex.unlock();
 
-				EvaluateChunkPadding(chunk.x, chunk.y);
-
-				GeneratePerlin(chunk.x, chunk.y);
-
-				Erode(chunk.x, chunk.y, pErosion);
+				if (chunk.eroded && (!m_ErodedChunks.contains(chunk.x) || !m_ErodedChunks[chunk.x].contains(chunk.y)))
+				{
+					m_ErodedChunks[chunk.x].insert(chunk.y);
+					Erode(chunk.x, chunk.y, pErosion);
+				}
 
 				std::vector<float> chunkData(m_ChunkSize * m_ChunkSize);
 				const int paddingSize{ m_ChunkSize / 2 };
@@ -52,6 +47,9 @@ Erosion::TerrainManager::TerrainManager()
 					}
 				}
 				chunk.pTerrain->SetHeights(chunkData);
+
+				const std::lock_guard lock{ m_QueueMutex };
+				if (chunk.eroded) m_ActiveChunks[chunk.x][chunk.y] = chunk.pTerrain;
 			}
 		}
 	};
@@ -62,136 +60,23 @@ Erosion::TerrainManager::~TerrainManager()
 	m_Running = false;
 }
 
-void Erosion::TerrainManager::Generate(int x, int y, leap::TerrainComponent* pTerrain)
+void Erosion::TerrainManager::Generate(int x, int y, leap::TerrainComponent* pTerrain, bool eroded)
 {
 	if (x < 0 || y < 0) return;
 
-	std::lock_guard lock{ m_QueueMutex };
-	m_ChunkQueue.push(Chunk{ x,y, pTerrain });
+	const std::lock_guard lock{ m_QueueMutex };
+
+	if (m_ActiveChunks.contains(x) && m_ActiveChunks[x].contains(y)) return;
+
+	m_ChunkQueue.push(Chunk{ x,y, pTerrain, eroded });
 }
 
-void Erosion::TerrainManager::EvaluateChunkPadding(int chunkX, int chunkY)
+void Erosion::TerrainManager::Unregister(int x, int y)
 {
-	const int paddingSize{ m_ChunkSize / 2 };
+	const std::lock_guard lock{ m_QueueMutex };
+	if (!m_ActiveChunks.contains(x) || !m_ActiveChunks[x].contains(y)) return;
 
-	const int startX{ chunkX * m_ChunkSize + paddingSize };
-	const int startY{ chunkY * m_ChunkSize + paddingSize };
-
-	const int left{ startX - paddingSize / 2 };
-	const int right{ startX + (m_ChunkSize - 1) + paddingSize / 2 };
-	const int bottom{  startY - paddingSize / 2 };
-	const int top{ startY + (m_ChunkSize - 1) + paddingSize / 2 };
-	const int centerX{ startX + m_ChunkSize / 2 };
-	const int centerY{ startY + m_ChunkSize / 2 };
-
-	if (m_Heightmap.GetHeight(left, centerY) < FLT_EPSILON)
-	{
-		for (int x{ startX - paddingSize }; x < startX; ++x)
-		{
-			for (int y{ startY }; y < startY + m_ChunkSize; ++y)
-			{
-				float noiseValue{ m_Perlin.GetHeight(static_cast<float>(x), static_cast<float>(y)) };
-				m_Heightmap.GetHeight(x,y) = noiseValue;
-			}
-		}
-	}
-	if (m_Heightmap.GetHeight(right, centerY) < FLT_EPSILON)
-	{
-		for (int x{ startX + m_ChunkSize }; x < startX + m_ChunkSize + paddingSize; ++x)
-		{
-			for (int y{ startY }; y < startY + m_ChunkSize; ++y)
-			{
-				float noiseValue{ m_Perlin.GetHeight(static_cast<float>(x), static_cast<float>(y)) };
-				m_Heightmap.GetHeight(x, y) = noiseValue;
-			}
-		}
-	}
-	if (m_Heightmap.GetHeight(centerX, top) < FLT_EPSILON)
-	{
-		for (int x{ startX }; x < startX + m_ChunkSize; ++x)
-		{
-			for (int y{ startY + m_ChunkSize }; y < startY + m_ChunkSize + paddingSize; ++y)
-			{
-				float noiseValue{ m_Perlin.GetHeight(static_cast<float>(x), static_cast<float>(y)) };
-				m_Heightmap.GetHeight(x, y) = noiseValue;
-			}
-		}
-	}
-	if (m_Heightmap.GetHeight(centerX, bottom) < FLT_EPSILON)
-	{
-		for (int x{ startX }; x < startX + m_ChunkSize; ++x)
-		{
-			for (int y{ startY - paddingSize }; y < startY; ++y)
-			{
-				float noiseValue{ m_Perlin.GetHeight(static_cast<float>(x), static_cast<float>(y)) };
-				m_Heightmap.GetHeight(x, y) = noiseValue;
-			}
-		}
-	}
-	if (m_Heightmap.GetHeight(left, bottom) < FLT_EPSILON)
-	{
-		for (int x{ startX - paddingSize }; x < startX; ++x)
-		{
-			for (int y{ startY - paddingSize }; y < startY; ++y)
-			{
-				float noiseValue{ m_Perlin.GetHeight(static_cast<float>(x), static_cast<float>(y)) };
-				m_Heightmap.GetHeight(x, y) = noiseValue;
-			}
-		}
-	}
-	if (m_Heightmap.GetHeight(right, bottom) < FLT_EPSILON)
-	{
-		for (int x{ startX + m_ChunkSize }; x < startX + m_ChunkSize + paddingSize; ++x)
-		{
-			for (int y{ startY - paddingSize }; y < startY; ++y)
-			{
-				float noiseValue{ m_Perlin.GetHeight(static_cast<float>(x), static_cast<float>(y)) };
-				m_Heightmap.GetHeight(x, y) = noiseValue;
-			}
-		}
-	}
-	if (m_Heightmap.GetHeight(left, top) < FLT_EPSILON)
-	{
-		for (int x{ startX - paddingSize }; x < startX; ++x)
-		{
-			for (int y{ startY + m_ChunkSize }; y < startY + m_ChunkSize + paddingSize; ++y)
-			{
-				float noiseValue{ m_Perlin.GetHeight(static_cast<float>(x), static_cast<float>(y)) };
-				m_Heightmap.GetHeight(x, y) = noiseValue;
-			}
-		}
-	}
-	if (m_Heightmap.GetHeight(right, top) < FLT_EPSILON)
-	{
-		for (int x{ startX + m_ChunkSize }; x < startX + m_ChunkSize + paddingSize; ++x)
-		{
-			for (int y{ startY + m_ChunkSize }; y < startY + m_ChunkSize + paddingSize; ++y)
-			{
-				float noiseValue{ m_Perlin.GetHeight(static_cast<float>(x), static_cast<float>(y)) };
-				m_Heightmap.GetHeight(x, y) = noiseValue;
-			}
-		}
-	}
-}
-
-void Erosion::TerrainManager::GeneratePerlin(int chunkX, int chunkY)
-{
-	const int paddingSize{ m_ChunkSize / 2 };
-
-	const int startX{ chunkX * m_ChunkSize + paddingSize };
-	const int startY{ chunkY * m_ChunkSize + paddingSize };
-
-	for (int x{ startX }; x < startX + m_ChunkSize; ++x)
-	{
-		for (int y{ startY }; y < startY + m_ChunkSize; ++y)
-		{
-			float& height{ m_Heightmap.GetHeight(x, y) };
-			if (height > FLT_EPSILON) continue;
-
-			const float noiseValue{ m_Perlin.GetHeight(static_cast<float>(x), static_cast<float>(y)) };
-			height = noiseValue;
-		}
-	}
+	m_ActiveChunks[x].erase(y);
 }
 
 void Erosion::TerrainManager::Erode(int x, int y, const std::unique_ptr<ITerrainGenerator>& pErosion)

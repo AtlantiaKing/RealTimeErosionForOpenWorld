@@ -7,6 +7,7 @@
 #include <queue>
 #include <mutex>
 #include <memory>
+#include <set>
 
 #include "../ErosionAlgorithms/ITerrainGenerator.h"
 #include <Generator.h>
@@ -31,7 +32,8 @@ namespace Erosion
 		TerrainManager& operator=(const TerrainManager& other) = delete;
 		TerrainManager& operator=(TerrainManager&& other) = delete;
 
-		void Generate(int x, int y, leap::TerrainComponent* pTerrain);
+		void Generate(int x, int y, leap::TerrainComponent* pTerrain, bool eroded);
+		void Unregister(int x, int y);
 		Heightmap& GetHeightmap() { return m_Heightmap; }
 
 	private:
@@ -40,23 +42,21 @@ namespace Erosion
 			int x{};
 			int y{};
 			leap::TerrainComponent* pTerrain{};
+			bool eroded{};
 		};
 
-		void EvaluateChunkPadding(int x, int y);
-		void GeneratePerlin(int x, int y);
 		void Erode(int x, int y, const std::unique_ptr<ITerrainGenerator>& pErosion);
 		void UpdateComponents(int x, int y);
-
-		that::Generator m_Perlin{};
 
 		std::mutex m_QueueMutex{};
 		std::queue<Chunk> m_ChunkQueue{};
 
 		static const int m_ChunkSize{ 257 };
-		const float m_PerlinMultiplier{ 23.726f };
 
 		Heightmap m_Heightmap{ m_ChunkSize };
 		int m_HeightmapSize{};
+		std::map<int, std::set<int>> m_ErodedChunks{};
+		std::map<int, std::map<int, leap::TerrainComponent*>> m_ActiveChunks{};
 
 		bool m_Running{ true };
 
