@@ -68,7 +68,7 @@ void Erosion::RealtimeGenerator::Update()
 
 			if (it != end(m_Chunks))
 			{
-				TerrainManager::GetInstance().Generate(xPos, zPos, it->pTerrain, abs(xPos - x) < 4 && abs(zPos - z) < 4);
+				TerrainManager::GetInstance().Generate(xPos, zPos, it->pTerrain, abs(xPos - x) < 5 && abs(zPos - z) < 5);
 				continue;
 			}
 
@@ -78,7 +78,7 @@ void Erosion::RealtimeGenerator::Update()
 			const int oldTerrainZ{ static_cast<int>(pTerrain->GetTransform()->GetLocalPosition().z / 256) };
 			pTerrain->GetTransform()->SetLocalPosition(static_cast<float>(xPos * 256), 0.0f, static_cast<float>(zPos * 256));
 			TerrainManager::GetInstance().Unregister(oldTerrainX, oldTerrainZ);
-			TerrainManager::GetInstance().Generate(xPos, zPos, pTerrain, abs(xPos - x) < 4 && abs(zPos - z) < 4);
+			TerrainManager::GetInstance().Generate(xPos, zPos, pTerrain, abs(xPos - x) < 5 && abs(zPos - z) < 5);
 			m_Chunks.emplace_back(xPos, zPos, pTerrain);
 		}
 	}

@@ -41,7 +41,7 @@ namespace Erosion
 		std::vector<Chunk> m_Chunks{};
 		std::vector<leap::TerrainComponent*> m_Pool{};
 
-		int m_Range{ 13 };
+		int m_Range{ 1 };
 
 		float m_TimePerChunk{ 0.01f };
 		float m_CurTime{};

@@ -49,8 +49,8 @@ float that::PerlinComposition::GetOctaveNoise(float x, float y, const PerlinOcta
 	y += m_MiddleOfNoise + octave.offset.y;
 
 	// Multiply the current coordinate depending on the octave and zoom
-	x *= powf(2.0f, 1.0f / octave.multiplier - 1) / octave.zoom;
-	y *= powf(2.0f, 1.0f / octave.multiplier - 1) / octave.zoom;
+	x *= octave.zoom;
+	y *= octave.zoom;
 
 	// Calculate the grid corners
 	const int gridX0{ static_cast<int>(x) };
