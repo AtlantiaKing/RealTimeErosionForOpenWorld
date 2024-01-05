@@ -60,12 +60,12 @@ void Erosion::TerrainGeneratorComponent::GenerateNewPerlin()
 	{
 		that::NoiseMap continentalNess{};
 		continentalNess.GetGraph().AddNode(0.0f, 0.1f);
-		continentalNess.GetGraph().AddNode(0.4f, 0.1f);
-		continentalNess.GetGraph().AddNode(0.6f, 0.7f);
-		continentalNess.GetGraph().AddNode(0.75f, 0.8f);
-		continentalNess.GetGraph().AddNode(0.8f, 0.74f);
+		//continentalNess.GetGraph().AddNode(0.4f, 0.1f);
+		//continentalNess.GetGraph().AddNode(0.6f, 0.7f);
+		//continentalNess.GetGraph().AddNode(0.75f, 0.8f);
+		//continentalNess.GetGraph().AddNode(0.8f, 0.74f);
 		continentalNess.GetGraph().AddNode(1.0f, 1.0f);
-		continentalNess.GetPerlin().AddOctave(1.0f, 100.0f * m_PerlinMultiplier);
+		continentalNess.GetPerlin().AddOctave(1.0f, 200.0f * m_PerlinMultiplier);
 		m_pGen->GetHeightMap().AddNoiseMap(continentalNess);
 
 		if (m_DetailedPerlin)

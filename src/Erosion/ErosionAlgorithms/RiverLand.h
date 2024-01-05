@@ -2,11 +2,14 @@
 
 #include "ITerrainGenerator.h"
 
+#include <Generator.h>
+
 namespace Erosion
 {
 	class RiverLand final : public ITerrainGenerator
 	{
 	public:
+		RiverLand();
 		virtual ~RiverLand() = default;
 
 		virtual void GetHeights(std::vector<float>& heights) override;
@@ -18,13 +21,21 @@ namespace Erosion
 			int z{};
 			float slope{};
 			float distance{ FLT_MAX };
+			//float minHeight{};
+			//int ptrIdx{ -1 };
 			bool isChecked{};
 		};
 
-		float m_RiverHeight{ 0.12f };
-		float m_Divider{ 128.0f };
-		float m_CliffThreshold{ 0.0035f };
-		int m_BlurSize{ 9 };
-		bool m_DoCliffDetection{};
+		void NewMaps();
+
+		float m_RiverHeight{ 0.32781f };
+		float m_Multiplier{ 0.32781f };
+		float m_Divider{ /*509.987f*/82.828f };
+		float m_CliffThreshold{ 0.01132f };
+		int m_BlurSize{ /*9*/28 };
+		bool m_DoCliffDetection{false};
+
+		that::NoiseMap m_SlopeMap{};
+		std::vector<std::pair<that::NoiseMap, that::NoiseMap>> m_RiverMaps{};
 	};
 }
