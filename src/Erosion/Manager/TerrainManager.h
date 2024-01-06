@@ -1,46 +1,69 @@
 #pragma once
 
 #include <Singleton.h>
+
 #include <vector>
+#include <thread>
+#include <queue>
+#include <mutex>
+#include <memory>
+#include <set>
+
+#include "../ErosionAlgorithms/ITerrainGenerator.h"
+#include <Generator.h>
+
+#include "../Data/Heightmap.h"
+
+namespace leap
+{
+	class TerrainComponent;
+}
 
 namespace Erosion
 {
-	class TerrainGeneratorComponent;
-
 	class TerrainManager final : public leap::Singleton<TerrainManager>
 	{
 	public:
-		~TerrainManager() = default;
+		TerrainManager();
+		~TerrainManager();
 
 		TerrainManager(const TerrainManager& other) = delete;
 		TerrainManager(TerrainManager&& other) = delete;
 		TerrainManager& operator=(const TerrainManager& other) = delete;
 		TerrainManager& operator=(TerrainManager&& other) = delete;
 
-		void AddTerrain(int x, int y, const TerrainGeneratorComponent* pTerrain, std::vector<float> heights);
-		void RemoveTerrain(int x, int y);
+		void Generate(int x, int y, leap::TerrainComponent* pTerrain, bool eroded);
+		void Unregister(int x, int y);
+		void Update();
+		Heightmap& GetHeightmap() { return m_Heightmap; }
 
 	private:
-		TerrainManager() = default;
-		friend leap::Singleton<TerrainManager>;
-
-		enum class EvaluateDirection
-		{
-			Forward,
-			Back,
-			Right,
-			Left
-		};
 		struct Chunk final
 		{
 			int x{};
 			int y{};
-			const TerrainGeneratorComponent* pTerrain{};
-			std::vector<float> heights{};
+			leap::TerrainComponent* pTerrain{};
+			bool eroded{};
 		};
 
-		void EvaluateChunk(Chunk& cur, int evalX, int evalY, EvaluateDirection dir);
+		void Erode(int x, int y, const std::unique_ptr<ITerrainGenerator>& pErosion);
+		void UpdateComponents(int x, int y);
 
-		std::vector<Chunk> m_Chunks{};
+		std::mutex m_QueueMutex{};
+		std::queue<Chunk> m_ChunkQueue{};
+
+		static const int m_ChunkSize{ 257 };
+
+		Heightmap m_Heightmap{ m_ChunkSize };
+		int m_HeightmapSize{};
+		std::map<int, std::set<int>> m_ErodedChunks{};
+		std::map<int, std::map<int, std::pair<leap::TerrainComponent*, bool>>> m_ActiveChunks{};
+		std::vector<Chunk> m_ChangedChunks{};
+
+		bool m_Running{ true };
+		bool m_Reload{};
+		bool m_MainThreadBusy{};
+
+		std::jthread m_Thread{};
 	};
 }

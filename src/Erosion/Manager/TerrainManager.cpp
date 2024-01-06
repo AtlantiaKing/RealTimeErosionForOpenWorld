@@ -1,114 +1,154 @@
 #include "TerrainManager.h"
 
 #include "../Components/TerrainGeneratorComponent.h"
-#include <SceneGraph/GameObject.h>
+
+#include <Presets/Presets.h>
+
+#include "../ErosionAlgorithms/HansBeyer.h"
+
+#include <algorithm>
+
 #include <Components/RenderComponents/TerrainComponent.h>
 
-void Erosion::TerrainManager::AddTerrain(int x, int y, const TerrainGeneratorComponent* pTerrain, std::vector<float> heights)
+Erosion::TerrainManager::TerrainManager()
 {
-	// Calculate the chunk position
-	const int chunkX{ x / 256 };
-	const int chunkY{ y / 256 };
+	m_Thread = std::jthread
+	{
+		[this]()
+		{
+			std::unique_ptr<ITerrainGenerator> pErosion = std::make_unique<HansBeyer>();
+			while (true)
+			{
+				if (!m_Running) return;
+				if (m_MainThreadBusy) continue;
 
-	// Add the new chunk to the vector
-	m_Chunks.emplace_back(chunkX, chunkY, pTerrain, std::move(heights));
-	auto& chunk{ m_Chunks[m_Chunks.size() - 1] };
+				m_QueueMutex.lock();
+				if (m_ChunkQueue.empty())
+				{
+					m_QueueMutex.unlock();
+					continue;
+				}
+				Chunk chunk{ m_ChunkQueue.front() };
+				m_ChunkQueue.pop();
+				m_QueueMutex.unlock();
 
-	// Evaluate all neighbouring chunks and update their shared vertices if needed
-	EvaluateChunk(chunk, chunkX - 1, chunkY, EvaluateDirection::Left);
-	EvaluateChunk(chunk, chunkX + 1, chunkY, EvaluateDirection::Right);
-	EvaluateChunk(chunk, chunkX, chunkY - 1, EvaluateDirection::Back);
-	EvaluateChunk(chunk, chunkX, chunkY + 1, EvaluateDirection::Forward);
+				const bool exists{ m_ActiveChunks.contains(chunk.x) && m_ActiveChunks[chunk.x].contains(chunk.y) && m_ActiveChunks[chunk.x][chunk.y].first };
+
+				if (!chunk.eroded && exists) continue;
+
+				bool isChunkEroded{ m_ErodedChunks.contains(chunk.x) && m_ErodedChunks[chunk.x].contains(chunk.y) };
+				if (chunk.eroded && !isChunkEroded)
+				{
+					m_ErodedChunks[chunk.x].insert(chunk.y);
+					Erode(chunk.x, chunk.y, pErosion);
+				}
+
+				// Generate perlin for non eroded chunks
+				if (!chunk.eroded && !isChunkEroded)
+				{
+					const int paddingSize{ m_ChunkSize / 2 };
+					for (int x{}; x < m_ChunkSize; ++x)
+					{
+						for (int y{}; y < m_ChunkSize; ++y)
+						{
+							m_Heightmap.GetHeight(paddingSize + chunk.x * (m_ChunkSize - 1) + x, paddingSize + chunk.y * (m_ChunkSize - 1) + y);
+						}
+					}
+				}
+
+				m_ActiveChunks[chunk.x][chunk.y] = std::make_pair(chunk.pTerrain, isChunkEroded);
+
+				if ((chunk.eroded && isChunkEroded) || !chunk.eroded)
+				{
+					m_ChangedChunks.emplace_back(chunk.x, chunk.y, m_ActiveChunks[chunk.x][chunk.y].first);
+				}
+				else
+				{
+					for (int x{ -1 }; x <= 1; ++x)
+					{
+						for (int y{ -1 }; y <= 1; ++y)
+						{
+							if (!m_ActiveChunks.contains(chunk.x + x)) continue;
+							if (!m_ActiveChunks[chunk.x].contains(chunk.y + y)) continue;
+
+							auto pTerrain{ m_ActiveChunks[chunk.x + x][chunk.y + y].first };
+
+							if (pTerrain == nullptr) continue;
+
+							m_ChangedChunks.emplace_back(chunk.x + x, chunk.y + y, m_ActiveChunks[chunk.x + x][chunk.y + y].first);
+						}
+					}
+				}
+
+				m_Reload = true;
+				m_MainThreadBusy = true;
+			}
+		}
+	};
 }
 
-void Erosion::TerrainManager::RemoveTerrain(int x, int y)
+Erosion::TerrainManager::~TerrainManager()
 {
-	std::erase_if(m_Chunks, [=](const auto& chunk) { return chunk.x == x && chunk.y == y; });
+	m_Running = false;
 }
 
-void Erosion::TerrainManager::EvaluateChunk(Chunk& cur, int evalX, int evalY, EvaluateDirection dir)
+void Erosion::TerrainManager::Generate(int x, int y, leap::TerrainComponent* pTerrain, bool eroded)
 {
-	// Get the neighbouring chunk
-	const auto evalIt{ std::find_if(begin(m_Chunks), end(m_Chunks), [=](const auto& chunk) { return chunk.x == evalX && chunk.y == evalY; }) };
+	if (x < 0 || y < 0) return;
 
-	// If the neighbouring chunk doesn't exist, stop here
-	if (evalIt == end(m_Chunks)) return;
+	if (m_ActiveChunks.contains(x) && m_ActiveChunks[x].contains(y) && m_ActiveChunks[x][y].second) return;
 
-	// Get the terrain components and their height vectors
-	auto pCurTerrain{ cur.pTerrain->GetGameObject()->GetComponent<leap::TerrainComponent>() };
-	auto pEvalTerrain{ evalIt->pTerrain->GetGameObject()->GetComponent<leap::TerrainComponent>() };
-	auto& curHeights{ cur.heights };
-	auto& evalHeights{ evalIt->heights };
+	const std::lock_guard lock{ m_QueueMutex };
+	m_ChunkQueue.push(Chunk{ x,y, pTerrain, eroded });
+}
 
-	// Get the terrain size
-	const int terrainSize{ static_cast<int>(sqrtf(static_cast<float>(curHeights.size()))) };
+void Erosion::TerrainManager::Unregister(int x, int y)
+{
+	if (!m_ActiveChunks.contains(x) || !m_ActiveChunks[x].contains(y)) return;
 
-	// Fix gaps between terrains by averaging the outer edges
-	switch (dir)
+	m_ActiveChunks[x].erase(y);
+}
+
+void Erosion::TerrainManager::Update()
+{
+	if (!m_Reload) return;
+
+	m_Reload = false;
+
+	const int paddingSize{ m_ChunkSize / 2 };
+	for (auto& chunk : m_ChangedChunks)
 	{
-	case EvaluateDirection::Forward:
-	{
-		const int curZValue{ (terrainSize - 1) * terrainSize };
-		for (int x{}; x < terrainSize; ++x)
+		std::vector<float> chunkData(m_ChunkSize * m_ChunkSize);
+		for (int x{}; x < m_ChunkSize; ++x)
 		{
-			float& curHeight{ curHeights[x + curZValue] };
-			float& evalHeight{ evalHeights[x] };
-
-			float averageHeight{ (curHeight + evalHeight) / 2.0f };
-			curHeight = averageHeight;
-			evalHeight = averageHeight;
+			for (int y{}; y < m_ChunkSize; ++y)
+			{
+				chunkData[x + y * m_ChunkSize] = m_Heightmap.GetHeight(paddingSize + chunk.x * (m_ChunkSize - 1) + x, paddingSize + chunk.y * (m_ChunkSize - 1) + y);
+			}
 		}
-
-		break;
+		chunk.pTerrain->SetHeights(chunkData);
 	}
-	case EvaluateDirection::Back:
+
+	m_ChangedChunks.clear();
+	m_MainThreadBusy = false;
+}
+
+void Erosion::TerrainManager::Erode(int x, int y, const std::unique_ptr<ITerrainGenerator>& pErosion)
+{
+	pErosion->SetChunk(x, y);
+	pErosion->GetHeights(m_Heightmap);
+}
+
+void Erosion::TerrainManager::UpdateComponents(int /*chunkX*/, int /*chunkY*/)
+{
+	/*std::vector<float> chunkData(m_ChunkSize * m_ChunkSize);
+	const int paddingSize{ m_ChunkSize / 2 };
+	for (int x{}; x < m_ChunkSize; ++x)
 	{
-		const int evalZValue{ (terrainSize - 1) * terrainSize };
-		for (int x{}; x < terrainSize; ++x)
+		for (int y{}; y < m_ChunkSize; ++y)
 		{
-			float& curHeight{ curHeights[x] };
-			float& evalHeight{ evalHeights[x + evalZValue] };
-
-			float averageHeight{ (curHeight + evalHeight) / 2.0f };
-			curHeight = averageHeight;
-			evalHeight = averageHeight;
+			chunkData[x + y * m_ChunkSize] = m_Heightmap.GetHeight(paddingSize + chunkX * m_ChunkSize + x, paddingSize + chunkY * m_ChunkSize + y);
 		}
-
-		break;
 	}
-	case EvaluateDirection::Right:
-	{
-		const int curXValue{ terrainSize - 1 };
-		for (int z{}; z < terrainSize; ++z)
-		{
-			float& curHeight{ curHeights[curXValue + z * terrainSize] };
-			float& evalHeight{ evalHeights[z * terrainSize] };
-
-			float averageHeight{ (curHeight + evalHeight) / 2.0f };
-			curHeight = averageHeight;
-			evalHeight = averageHeight;
-		}
-
-		break;
-	}
-	case EvaluateDirection::Left:
-	{
-		const int evalXValue{ terrainSize - 1 };
-		for (int z{}; z < terrainSize; ++z)
-		{
-			float& curHeight{ curHeights[z * terrainSize] };
-			float& evalHeight{ evalHeights[evalXValue + z * terrainSize] };
-
-			float averageHeight{ (curHeight + evalHeight) / 2.0f };
-			curHeight = averageHeight;
-			evalHeight = averageHeight;
-		}
-
-		break;
-	}
-	}
-
-	// Apply the heights
-	pCurTerrain->SetHeights(curHeights);
-	pEvalTerrain->SetHeights(evalHeights);
+	chunk.pTerrain->SetHeights(chunkData);*/
 }

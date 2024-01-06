@@ -6,7 +6,7 @@
 
 #include <ImGui/imgui.h>
 
-void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
+void Erosion::HansBeyer::GetHeights(Heightmap& heights)
 {
 	struct Droplet 
 	{
@@ -19,7 +19,7 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 	};
 
 	// Terrain data
-	const int terrainSize{ static_cast<int>(sqrtf(static_cast<float>(heights.size()))) };
+	const int terrainSize{ heights.GetSize() };
 
 	// Erosion radius data
 	std::vector<float> radiusWeights{};
@@ -32,7 +32,7 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 		const float angle{ Random01() * glm::pi<float>() };
 		Droplet droplet
 		{
-			glm::vec2{ Random01() * (terrainSize - 1), Random01() * (terrainSize - 1) },
+			glm::vec2{ terrainSize / 2 + m_ChunkX * (terrainSize - 1) + Random01() * (terrainSize - 1), terrainSize / 2 + m_ChunkY * (terrainSize - 1) + Random01() * (terrainSize - 1) },
 			glm::vec2{ cosf(angle), sinf(angle) },
 			1.0f,
 			1.0f,
@@ -49,16 +49,16 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 			const float cellPosY{ droplet.position.y - gridPosY };
 
 			// Calculate the height of all the neighbouring cells around the droplet position
-			const float heightXY{ heights[gridPosX + gridPosY * terrainSize] };
-			const float heightXPlusY{ gridPosX + 1 >= terrainSize ? heightXY : heights[gridPosX + 1 + gridPosY * terrainSize] };
-			const float heightXYPlus{ gridPosY + 1 >= terrainSize ? heightXY : heights[gridPosX + (gridPosY + 1) * terrainSize] };
-			const float heightXPlusYPlus{ gridPosX + 1 >= terrainSize || gridPosY + 1 >= terrainSize ? heightXY : heights[gridPosX + 1 + (gridPosY + 1) * terrainSize] };
+			const float heightXY{ heights.GetHeight(gridPosX, gridPosY) };
+			const float heightXPlusY{ heights.GetHeight(gridPosX + 1, gridPosY) };
+			const float heightXYPlus{ heights.GetHeight(gridPosX, gridPosY + 1) };
+			const float heightXPlusYPlus{ heights.GetHeight(gridPosX + 1, gridPosY + 1) };
 
 			// Calculate the gradient at the droplet position
 			const glm::vec2 gradient
 			{
-				(heightXPlusY - heightXY)* (1.0f - cellPosY) + (heightXPlusYPlus - heightXYPlus) * cellPosY,
-				(heightXYPlus - heightXY)* (1.0f - cellPosX) + (heightXPlusYPlus - heightXPlusY) * cellPosX
+				(heightXPlusY - heightXY) * (1.0f - cellPosY) + (heightXPlusYPlus - heightXYPlus) * cellPosY,
+				(heightXYPlus - heightXY) * (1.0f - cellPosX) + (heightXPlusYPlus - heightXPlusY) * cellPosX
 			};
 			// Calculate the height at the droplet position
 			const float height{ (1.0f - cellPosY) * ((1.0f - cellPosX) * heightXY + cellPosX * heightXPlusY) + cellPosY * ((1.0f - cellPosX) * heightXYPlus + cellPosX * heightXPlusYPlus) };
@@ -75,17 +75,11 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 			const float newCellPosX{ droplet.position.x - newGridPosX };
 			const float newCellPosY{ droplet.position.y - newGridPosY };
 
-			// If the droplet has fallen outside the map, disable the droplet
-			if (newGridPosX < 0 || newGridPosY < 0 || newGridPosX >= terrainSize || newGridPosY >= terrainSize)
-			{
-				break;
-			}
-
 			// Calculate the height of all the neighbouring cells around the new droplet position
-			const float newHeightXY{ heights[newGridPosX + newGridPosY * terrainSize] };
-			const float newHeightXPlusY{ newGridPosX + 1 >= terrainSize ? heightXY : heights[newGridPosX + 1 + newGridPosY * terrainSize] };
-			const float newHeightXYPlus{ newGridPosY + 1 >= terrainSize ? heightXY : heights[newGridPosX + (newGridPosY + 1) * terrainSize] };
-			const float newHeightXPlusYPlus{ newGridPosX + 1 >= terrainSize || newGridPosY + 1 >= terrainSize ? heightXY : heights[newGridPosX + 1 + (newGridPosY + 1) * terrainSize] };
+			const float newHeightXY{ heights.GetHeight(newGridPosX, newGridPosY) };
+			const float newHeightXPlusY{ heights.GetHeight(newGridPosX + 1, newGridPosY) };
+			const float newHeightXYPlus{ heights.GetHeight(newGridPosX, newGridPosY + 1) };
+			const float newHeightXPlusYPlus{ heights.GetHeight(newGridPosX + 1, newGridPosY + 1) };
 
 			// Calculate the height at the new droplet position
 			const float newHeight{ (1.0f - newCellPosY) * ((1.0f - newCellPosX) * newHeightXY + newCellPosX * newHeightXPlusY) + newCellPosY * ((1.0f - newCellPosX) * newHeightXYPlus + newCellPosX * newHeightXPlusYPlus) };
@@ -104,10 +98,10 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 				const float droppedSediment{ heightDiff > 0.0f ? std::min(heightDiff, droplet.amountSediment) : (droplet.amountSediment - curCapacity) * m_Deposition };
 
 				// Add the sediment at the four grid positions around the droplets position
-				heights[gridPosX + gridPosY * terrainSize] += droppedSediment * (1.0f - cellPosX) * (1.0f - cellPosY);
-				if(gridPosX + 1 < terrainSize) heights[gridPosX + 1 + gridPosY * terrainSize] += droppedSediment * cellPosX * (1.0f - cellPosY);
-				if (gridPosY + 1 < terrainSize) heights[gridPosX + (gridPosY + 1) * terrainSize] += droppedSediment * (1.0f - cellPosX) * cellPosY;
-				if (gridPosX + 1 < terrainSize && gridPosY + 1 < terrainSize) heights[gridPosX + 1 + (gridPosY + 1) * terrainSize] += droppedSediment * cellPosX * cellPosY;
+				heights.GetHeight(gridPosX, gridPosY) += droppedSediment * (1.0f - cellPosX) * (1.0f - cellPosY);
+				heights.GetHeight(gridPosX + 1, gridPosY) += droppedSediment * cellPosX * (1.0f - cellPosY);
+				heights.GetHeight(gridPosX, gridPosY + 1) += droppedSediment * (1.0f - cellPosX) * cellPosY;
+				heights.GetHeight(gridPosX + 1, gridPosY + 1) += droppedSediment * cellPosX * cellPosY;
 				
 				// Update the droplets sediment amount
 				droplet.amountSediment -= droppedSediment;
@@ -133,8 +127,6 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 					{
 						const int xPos = gridPosX + radX - halfErosionRadius;
 						const int yPos = gridPosY + radY - halfErosionRadius;
-
-						if (xPos < 0 || yPos < 0 || xPos >= terrainSize || yPos >= terrainSize) continue;
 
 						const float dX{ dropletPosX - xPos };
 						const float dY{ dropletPosY - yPos };
@@ -169,10 +161,8 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 						const int xPos = radX - halfErosionRadius;
 						const int yPos = radY - halfErosionRadius;
 
-						if (gridPosX + xPos < 0 || gridPosY + yPos < 0 || gridPosX + xPos >= terrainSize || gridPosY + yPos >= terrainSize) continue;
-
 						const int radiusIdx{ radX + radY * m_ErosionRadius };
-						heights[gridPosX + xPos + (gridPosY + yPos) * terrainSize] -= takenSediment * radiusWeights[radiusIdx];
+						heights.GetHeight(gridPosX + xPos, gridPosY + yPos) -= takenSediment * radiusWeights[radiusIdx];
 					}
 				}
 

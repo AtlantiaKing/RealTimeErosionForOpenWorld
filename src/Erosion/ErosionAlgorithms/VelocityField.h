@@ -23,7 +23,7 @@ namespace Erosion
 
 		virtual ~VelocityField() = default;
 
-		virtual void GetHeights(std::vector<float>& heights) override;
+		virtual void GetHeights(Heightmap& heights) override;
 		virtual void OnGUI() override;
 
 	private:

@@ -8,6 +8,7 @@
 
 #include <GameContext/GameContext.h>
 #include <GameContext/Timer.h>
+#include "../Manager/TerrainManager.h"
 
 void Erosion::RealtimeGenerator::SetPlayerTransform(leap::Transform* pPlayer)
 {
@@ -24,14 +25,17 @@ void Erosion::RealtimeGenerator::Awake()
 	for (int i{}; i < worldSize; ++i)
 	{
 		const auto pTerrain{ leap::SceneManager::GetInstance().GetActiveScene()->CreateGameObject("Terrain") };
-		pTerrain->AddComponent<leap::TerrainComponent>()->SetSize(256);
+		auto pTerrainComponent{ pTerrain->AddComponent<leap::TerrainComponent>() };
+		pTerrainComponent->SetSize(256);
 
-		m_Pool[i] = pTerrain->AddComponent<Erosion::TerrainGeneratorComponent>();
+		m_Pool[i] = pTerrainComponent;
 	}
 }
 
 void Erosion::RealtimeGenerator::Update()
 {
+	TerrainManager::GetInstance().Update();
+
 	if (m_CurTime < m_TimePerChunk)
 	{
 		m_CurTime += leap::GameContext::GetInstance().GetTimer()->GetDeltaTime();
@@ -62,12 +66,19 @@ void Erosion::RealtimeGenerator::Update()
 		{
 			const auto it{ std::find_if(begin(m_Chunks), end(m_Chunks), [=](const auto& chunk) { return chunk.x == xPos && chunk.y == zPos; }) };
 
-			if (it != end(m_Chunks)) continue;
+			if (it != end(m_Chunks))
+			{
+				TerrainManager::GetInstance().Generate(xPos, zPos, it->pTerrain, abs(xPos - x) < 5 && abs(zPos - z) < 5);
+				continue;
+			}
 
 			auto pTerrain{ m_Pool[0] };
 			m_Pool.erase(begin(m_Pool));
+			const int oldTerrainX{ static_cast<int>(pTerrain->GetTransform()->GetLocalPosition().x / 256) };
+			const int oldTerrainZ{ static_cast<int>(pTerrain->GetTransform()->GetLocalPosition().z / 256) };
 			pTerrain->GetTransform()->SetLocalPosition(static_cast<float>(xPos * 256), 0.0f, static_cast<float>(zPos * 256));
-			pTerrain->GenerateAt(xPos * 256, zPos * 256);
+			TerrainManager::GetInstance().Unregister(oldTerrainX, oldTerrainZ);
+			TerrainManager::GetInstance().Generate(xPos, zPos, pTerrain, abs(xPos - x) < 5 && abs(zPos - z) < 5);
 			m_Chunks.emplace_back(xPos, zPos, pTerrain);
 		}
 	}
