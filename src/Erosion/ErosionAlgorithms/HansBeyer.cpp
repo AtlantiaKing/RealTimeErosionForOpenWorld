@@ -197,6 +197,39 @@ void Erosion::HansBeyer::GetHeights(std::vector<float>& heights)
 			if (++droplet.pathLength >= m_MaxPathLength) break;
 		}
 	}
+
+	std::vector<float> output(heights.size());
+	int kernelSize{ 5 };
+	float kernelSum{};
+	float sigma{ 1.0f };
+	std::vector<float> kernel;
+	for (int x = -kernelSize / 2; x <= kernelSize / 2; ++x) {
+		for (int y = -kernelSize / 2; y <= kernelSize / 2; ++y) {
+			float value = std::exp(-(x * x + y * y) / (2.0f * sigma * sigma));
+			kernel.push_back(value);
+			kernelSum += value;
+		}
+	}
+
+	// Normalize the kernel
+	for (float& value : kernel) {
+		value /= kernelSum;
+	}
+	// Apply the convolution operation
+	for (int y = kernelSize / 2; y < terrainSize - kernelSize / 2; ++y) {
+		for (int x = kernelSize / 2; x < terrainSize - kernelSize / 2; ++x) {
+			float sum = 0.0f;
+			for (int ky = -kernelSize / 2; ky <= kernelSize / 2; ++ky) {
+				for (int kx = -kernelSize / 2; kx <= kernelSize / 2; ++kx) {
+					int index = (y + ky) * terrainSize + (x + kx);
+					sum += heights[index] * kernel[(ky + kernelSize / 2) * kernelSize + (kx + kernelSize / 2)];
+				}
+			}
+			output[y * terrainSize + x] = sum;
+		}
+	}
+	heights = output;
+
 }
 
 void Erosion::HansBeyer::OnGUI()
